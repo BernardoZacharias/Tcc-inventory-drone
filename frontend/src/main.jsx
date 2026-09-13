@@ -4,6 +4,8 @@ import App from "./App";
 import { MotionConfig } from "framer-motion";
 import ToastHub from "./components/Toast";
 import "./styles/global.css";
+// depois do global: o @theme do Tailwind aponta para os tokens dele
+import "./styles/tailwind.css";
 // polish.css por ultimo: sobrepoe as folhas de cada pagina
 import "./styles/polish.css";
 // Continuidade visual das páginas institucionais (carregado por último)

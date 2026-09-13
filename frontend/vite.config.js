@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 /*
  * O caminho dos assets muda conforme o destino do build:
@@ -18,5 +19,5 @@ const paraDesktop = process.env.GESTOCK_TARGET === 'desktop'
 // https://vite.dev/config/
 export default defineConfig({
   base: paraDesktop ? './' : '/',
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
 })

@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+/* ════════════════════════════════════════════════════════════
+   Tailwind ligado ao design system que já existe.
+
+   O projeto inteiro é CSS puro com tokens semânticos em
+   global.css, e é deles que sai o tema claro/escuro. Em vez de
+   trazer a paleta do Tailwind (gray-700, slate-900...) e passar
+   a ter DOIS sistemas de cor brigando, o @theme aqui aponta cada
+   utilitário para os tokens que já mandam no app.
+
+   Consequência prática: `bg-surface-2` no Tailwind e
+   `var(--surface-2)` no CSS puro são a mesma cor, e trocar o tema
+   continua funcionando em ambos sem nenhum código a mais.
+   ════════════════════════════════════════════════════════════ */
+@theme inline {
+  /* Fundos e superfícies */
+  --color-bg-0: var(--bg-0);
+  --color-bg-1: var(--bg-1);
+  --color-bg-2: var(--bg-2);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-glass: var(--glass);
+
+  /* Texto — quatro níveis, como o sistema já define */
+  --color-ink: var(--text-strong);
+  --color-body: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--muted-2);
+
+  /* Linhas */
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-glass-brd: var(--glass-brd);
+
+  /* Marca */
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-deep: var(--accent-deep);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
+
+  /* Estados */
+  --color-ok: var(--green);
+  --color-warn: var(--amber);
+  --color-bad: var(--red);
+  --color-ok-soft: var(--green-soft);
+  --color-warn-soft: var(--amber-soft);
+  --color-bad-soft: var(--red-soft);
+
+  /* Tipografia */
+  --font-display: var(--font-display);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  /* Raios — a escala do sistema */
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  /* Sombras */
+  --shadow-soft: var(--shadow-soft);
+  --shadow-lg: var(--shadow-lg);
+
+  /* Curvas de movimento */
+  --ease-fluid: var(--ease-fluid);
+}
+
+/* Varredura do scanner descendo a grade do hangar.
+   Só transform: não força layout, roda na GPU. */
+@keyframes varredura {
+  0%   { transform: translateY(12vh);  opacity: 0; }
+  12%  { opacity: 0.5; }
+  88%  { opacity: 0.5; }
+  100% { transform: translateY(86vh); opacity: 0; }
+}
