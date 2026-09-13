@@ -1,0 +1,22 @@
+# Normaliza fim de linha: evita que o repo fique cheio de diffs falsos
+# quando duas pessoas trabalham em sistemas diferentes (Windows x Linux/macOS).
+* text=auto eol=lf
+
+# Scripts que PRECISAM de CRLF no Windows
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# Binarios: nunca converter
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.svg  text
+*.pdf  binary
+*.woff binary
+*.woff2 binary
+
+# Arquivos gerados: nao poluem o diff nem contam como codigo do projeto
+package-lock.json linguist-generated=true -diff
