@@ -45,6 +45,9 @@ class DriverStatus:
     connect_attempts: int = 0
     last_frame_at: Optional[float] = None
     last_error: str = ""
+    # Erro que NAO adianta retentar (falta pacote, configuracao errada).
+    # O VideoEngine para na hora em vez de tentar 56 vezes.
+    fatal: bool = False
     extra: dict = field(default_factory=dict)
 
     @property

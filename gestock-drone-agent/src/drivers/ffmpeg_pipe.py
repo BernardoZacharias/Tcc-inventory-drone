@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import shutil
 import subprocess
 import threading
@@ -56,29 +57,50 @@ def descobrir_resolucao(url: str, transport: str = "tcp",
     saída em frames é obrigatório saber exatamente quantos bytes cada
     frame ocupa (largura × altura × 3).
     """
-    if not ffprobe_disponivel():
-        return None
+    # Tentativa 1 — ffprobe, que responde em JSON.
+    if ffprobe_disponivel():
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-rtsp_transport", transport,
+            "-select_streams", "v:0",
+            "-show_entries", "stream=width,height",
+            "-of", "json", url,
+        ]
+        try:
+            saida = subprocess.run(cmd, capture_output=True, timeout=timeout, text=True)
+            if saida.returncode == 0:
+                streams = json.loads(saida.stdout).get("streams") or []
+                if streams:
+                    w, h = int(streams[0]["width"]), int(streams[0]["height"])
+                    if w > 0 and h > 0:
+                        return (w, h)
+            log.debug("ffprobe nao resolveu: %s", (saida.stderr or "").strip()[:200])
+        except (subprocess.TimeoutExpired, ValueError, KeyError,
+                json.JSONDecodeError) as exc:
+            log.debug("ffprobe falhou: %s", exc)
 
+    # Tentativa 2 — ler o banner do proprio ffmpeg, que imprime algo como
+    #   Stream #0:0: Video: h264 (Main), yuv420p, 1280x720, 25 fps
+    # Ha firmwares que engasgam no ffprobe mas abrem normalmente no ffmpeg.
+    log.debug("Tentando descobrir a resolucao pelo banner do ffmpeg...")
     cmd = [
-        "ffprobe", "-v", "error",
+        "ffmpeg", "-hide_banner",
         "-rtsp_transport", transport,
-        "-select_streams", "v:0",
-        "-show_entries", "stream=width,height",
-        "-of", "json", url,
+        "-i", url, "-t", "1", "-f", "null", "-",
     ]
     try:
         saida = subprocess.run(cmd, capture_output=True, timeout=timeout, text=True)
-        if saida.returncode != 0:
-            log.debug("ffprobe falhou: %s", saida.stderr.strip()[:200])
-            return None
-        streams = json.loads(saida.stdout).get("streams") or []
-        if not streams:
-            return None
-        w, h = int(streams[0]["width"]), int(streams[0]["height"])
-        return (w, h) if w > 0 and h > 0 else None
-    except (subprocess.TimeoutExpired, ValueError, KeyError, json.JSONDecodeError) as exc:
-        log.debug("ffprobe não respondeu: %s", exc)
-        return None
+        achado = re.search(r"Video:.*?,\s*(\d{2,5})x(\d{2,5})", saida.stderr or "")
+        if achado:
+            w, h = int(achado.group(1)), int(achado.group(2))
+            if w > 0 and h > 0:
+                log.debug("Resolucao lida do banner: %sx%s", w, h)
+                return (w, h)
+        log.debug("banner sem resolucao: %s", (saida.stderr or "").strip()[-300:])
+    except subprocess.TimeoutExpired:
+        log.debug("ffmpeg nao respondeu ao sondar a resolucao")
+
+    return None
 
 
 class FfmpegPipeDriver(BaseDroneDriver):
@@ -101,6 +123,7 @@ class FfmpegPipeDriver(BaseDroneDriver):
         self.transport = transport
         self.width = width
         self.height = height
+        self._forcado = bool(width and height)
         self.timeout_us = timeout_us
         self._proc: Optional[subprocess.Popen] = None
         self._stderr_thread: Optional[threading.Thread] = None
@@ -113,7 +136,7 @@ class FfmpegPipeDriver(BaseDroneDriver):
 
     # ── montagem do comando ───────────────────────────────────────
     def _comando(self) -> List[str]:
-        return [
+        cmd = [
             "ffmpeg",
             "-hide_banner", "-loglevel", "warning",
             # baixa latência: não acumular buffer antes de entregar
@@ -125,10 +148,22 @@ class FfmpegPipeDriver(BaseDroneDriver):
             "-timeout", str(self.timeout_us),
             "-i", self.url,
             "-an", "-sn",              # sem áudio, sem legenda
+        ]
+
+        if self._forcado:
+            # Resolução veio na mão. Forçamos a saída nesse tamanho com o
+            # filtro scale: assim o número de bytes por frame bate com o
+            # que o read() espera, mesmo que o chute esteja errado. Sem
+            # isto, um valor incorreto desalinha os bytes e o vídeo sai
+            # embaralhado / na diagonal.
+            cmd += ["-vf", f"scale={self.width}:{self.height}"]
+
+        cmd += [
             "-f", "rawvideo",
             "-pix_fmt", "bgr24",       # o formato que o OpenCV/numpy espera
             "-",
         ]
+        return cmd
 
     def _drenar_stderr(self) -> None:
         """
@@ -154,6 +189,7 @@ class FfmpegPipeDriver(BaseDroneDriver):
                 "ffmpeg não encontrado no PATH. Instale: "
                 "Arch `sudo pacman -S ffmpeg` · Ubuntu `sudo apt install ffmpeg`"
             )
+            self._status.fatal = True      # instalar pacote nao e retentavel
             log.error(self._status.last_error)
             return False
 
@@ -163,9 +199,11 @@ class FfmpegPipeDriver(BaseDroneDriver):
             if dims is None:
                 self._status.connected = False
                 self._status.last_error = (
-                    "não consegui descobrir a resolução. Informe na mão: "
-                    "--width 1280 --height 720"
+                    "não consegui descobrir a resolução do stream. Informe "
+                    "na mão, ex.: --width 1280 --height 720 (qualquer valor "
+                    "serve: o ffmpeg redimensiona para o tamanho pedido)"
                 )
+                self._status.fatal = True  # configuracao, nao rede
                 log.error(self._status.last_error)
                 return False
             self.width, self.height = dims

@@ -181,6 +181,15 @@ class VideoEngine:
                 self.machine.to(AgentState.STREAM_ATIVO, "stream aberto")
                 return True
 
+            # Erro de configuracao (falta ffmpeg, resolucao desconhecida):
+            # insistir nao conserta. Falha na hora, com a mensagem util.
+            if getattr(self.driver.status, "fatal", False):
+                self.machine.to(
+                    AgentState.ERRO,
+                    self.driver.status.last_error or "erro de configuracao",
+                )
+                return False
+
             if self.max_reconnects and tentativa >= self.max_reconnects:
                 self.machine.to(
                     AgentState.ERRO,
