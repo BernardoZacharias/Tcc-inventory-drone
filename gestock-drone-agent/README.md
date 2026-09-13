@@ -99,6 +99,69 @@ vivo — é o ponto da abstração de driver.
 
 ---
 
+## Quando der problema: rode o diagnóstico primeiro
+
+```bash
+python -m src.doctor
+```
+
+Ele testa **uma camada de cada vez** — Python, numpy, OpenCV, ffmpeg,
+rede, porta do drone, stream — e diz exatamente onde parou, em vez de
+"não funciona". O teste do OpenCV roda num subprocesso isolado, então
+mesmo que o OpenCV mate o processo o diagnóstico sobrevive e te conta.
+
+### `illegal hardware instruction (core dumped)`
+
+Sintoma: o Agent loga `Porta 192.168.1.1:7070 aberta — Abrindo vídeo...`
+e o processo morre na hora, sem erro de Python.
+
+Causa: o wheel do **opencv-python 5.0.x** usa instruções de CPU que a
+sua máquina não tem. Morre com SIGILL dentro do binário nativo — não é
+exceção Python, é o processo inteiro caindo.
+
+**Solução 1 — voltar para o OpenCV 4.x (recomendada):**
+
+```bash
+pip install "opencv-python>=4.9,<5"
+```
+
+O `requirements.txt` já trava nessa faixa; quem instalou antes da
+correção precisa rodar o comando acima.
+
+**Solução 2 — usar o ffmpeg do sistema (não passa pelo OpenCV):**
+
+```bash
+python -m src.main --driver flow-ufo --backend ffmpeg --headless
+```
+
+Esse caminho pede frames ao binário `ffmpeg` — o mesmo que você já
+validou com o `ffplay` — e só remonta os bytes com numpy. Fica imune a
+qualquer problema do OpenCV. Precisa de `ffmpeg` instalado:
+
+```bash
+sudo pacman -S ffmpeg      # Arch
+sudo apt install ffmpeg    # Ubuntu/Debian
+```
+
+> Sem `ffprobe` o Agent não descobre a resolução sozinho. Nesse caso
+> passe na mão: `--width 1280 --height 720`.
+
+### O vídeo trava depois de alguns segundos
+
+Tente o outro transporte — alguns firmwares implementam RTSP de forma
+peculiar:
+
+```bash
+python -m src.main --driver flow-ufo --transport udp
+```
+
+### `Porta 192.168.1.1:7070 não respondeu`
+
+O notebook saiu da Wi-Fi do drone (costuma voltar sozinho para a rede
+de casa). Reconecte na `FLOW-UFO_*` e tente de novo.
+
+---
+
 ## Testes
 
 Rodam em qualquer máquina, sem drone e sem câmera:

@@ -2,9 +2,20 @@
 #
 #   pip install -r requirements.txt
 #
-# opencv-python já traz FFmpeg embutido, que é quem fala RTSP.
-opencv-python>=4.9
-numpy>=1.26
+# ─────────────────────────────────────────────────────────────
+# POR QUE O OPENCV ESTÁ TRAVADO ABAIXO DA 5.0
+#
+# Os wheels pré-compilados do opencv-python 5.0.x quebram com
+# "illegal hardware instruction (core dumped)" — SIGILL — em várias
+# CPUs, no momento em que o VideoCapture inicializa o backend FFmpeg.
+# Não é erro de Python: é o binário nativo executando instrução que o
+# processador não tem.
+#
+# A série 4.x é estável e tem exatamente as mesmas APIs que usamos.
+# Só suba para a 5.x quando testar que o vídeo abre na sua máquina.
+# ─────────────────────────────────────────────────────────────
+opencv-python>=4.9,<5
+numpy>=1.26,<3
 
 # Opcional: só para a fonte sintética desenhar um QR de verdade
 # (usada em teste, dispensável para operar o drone).

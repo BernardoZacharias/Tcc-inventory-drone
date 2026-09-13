@@ -63,13 +63,23 @@ def montar_driver(args: argparse.Namespace):
     """Traduz os argumentos de linha de comando em um driver."""
     kind = args.driver
 
+    # --backend ffmpeg troca o decodificador sem mudar mais nada:
+    # usa o ffmpeg do sistema em vez do embutido no OpenCV.
+    usar_ffmpeg = args.backend == "ffmpeg"
+    extras = {}
+    if usar_ffmpeg and args.width and args.height:
+        extras = {"width": args.width, "height": args.height}
+
     if kind == "flow-ufo":
-        return build_driver("flow-ufo", ip=args.ip, port=args.port,
-                            path=args.path, transport=args.transport)
+        nome = "flow-ufo-ffmpeg" if usar_ffmpeg else "flow-ufo"
+        return build_driver(nome, ip=args.ip, port=args.port,
+                            path=args.path, transport=args.transport, **extras)
     if kind == "rtsp":
         if not args.source:
             raise SystemExit("--driver rtsp exige --source rtsp://...")
-        return build_driver("rtsp", url=args.source, transport=args.transport)
+        nome = "rtsp-ffmpeg" if usar_ffmpeg else "rtsp"
+        return build_driver(nome, url=args.source,
+                            transport=args.transport, **extras)
     if kind == "usb":
         return build_driver("usb", index=int(args.source or 0))
     if kind == "file":
@@ -107,6 +117,11 @@ def main(argv: Optional[list] = None) -> int:
     p.add_argument("--path", default="/webcam", help="endpoint RTSP")
     p.add_argument("--transport", default="tcp", choices=["tcp", "udp"],
                    help="transporte RTSP (padrão tcp: mais estável em Wi-Fi)")
+    p.add_argument("--backend", default="opencv", choices=["opencv", "ffmpeg"],
+                   help="quem decodifica o vídeo. Use 'ffmpeg' se o OpenCV "
+                        "quebrar com 'illegal hardware instruction'")
+    p.add_argument("--width", type=int, help="largura do frame (backend ffmpeg)")
+    p.add_argument("--height", type=int, help="altura do frame (backend ffmpeg)")
     p.add_argument("--stall-timeout", type=float, default=5.0,
                    help="segundos sem frame válido até reconectar")
     p.add_argument("--max-reconnects", type=int, default=0,

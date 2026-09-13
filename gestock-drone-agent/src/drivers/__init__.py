@@ -10,6 +10,11 @@ from __future__ import annotations
 from typing import Callable, Dict
 
 from .base import BaseDroneDriver, DriverError, DriverInfo, DriverStatus
+from .ffmpeg_pipe import (
+    FfmpegPipeDriver,
+    FlowUfoFfmpegDriver,
+    ffmpeg_disponivel,
+)
 from .flow_ufo import FlowUfoDriver
 from .local_sources import (
     SyntheticDriver,
@@ -19,8 +24,10 @@ from .local_sources import (
 from .rtsp_generic import RtspGenericDriver
 
 REGISTRY: Dict[str, Callable[..., BaseDroneDriver]] = {
-    "flow-ufo": FlowUfoDriver,
+    "flow-ufo": FlowUfoDriver,               # via OpenCV
+    "flow-ufo-ffmpeg": FlowUfoFfmpegDriver,  # via ffmpeg do sistema
     "rtsp": RtspGenericDriver,
+    "rtsp-ffmpeg": FfmpegPipeDriver,
     "usb": UsbCameraDriver,
     "file": VideoFileDriver,
     "synthetic": SyntheticDriver,
@@ -40,6 +47,7 @@ def build_driver(kind: str, **kwargs: object) -> BaseDroneDriver:
 __all__ = [
     "BaseDroneDriver", "DriverError", "DriverInfo", "DriverStatus",
     "FlowUfoDriver", "RtspGenericDriver",
+    "FlowUfoFfmpegDriver", "FfmpegPipeDriver", "ffmpeg_disponivel",
     "UsbCameraDriver", "VideoFileDriver", "SyntheticDriver",
     "REGISTRY", "build_driver",
 ]

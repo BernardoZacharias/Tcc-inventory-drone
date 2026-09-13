@@ -174,6 +174,65 @@ def test_maquina_de_estados_ignora_repeticao() -> None:
     print("ok  máquina de estados ignora repetição")
 
 
+def test_opencv_decodifica_de_verdade() -> None:
+    """
+    Exercita o cv2 DE VERDADE.
+
+    Este teste existe por causa de um bug real: o opencv-python 5.0.x
+    morria com SIGILL ("illegal hardware instruction") ao inicializar o
+    backend de vídeo. Os testes passavam mesmo assim, porque o driver
+    de teste é Python puro e nunca tocava no cv2 — o problema só
+    aparecia com o drone na frente.
+
+    O SyntheticDriver usa cv2 para montar o frame, então se o OpenCV
+    estiver quebrado nesta máquina, ISTO falha aqui e não na hora ruim.
+    """
+    from src.drivers.local_sources import SyntheticDriver
+
+    driver = SyntheticDriver(width=320, height=240, fps=60)
+    engine = VideoEngine(driver, stall_timeout=2.0)
+    engine.start()
+    try:
+        assert _esperar(lambda: engine.stats.frames_recebidos > 5, timeout=8),             "OpenCV não produziu frames — rode: python -m src.doctor"
+        ok, frame = engine.latest()
+        assert ok and frame is not None
+        assert frame.shape == (240, 320, 3), f"formato inesperado: {frame.shape}"
+    finally:
+        engine.stop()
+    print(f"ok  OpenCV decodifica de verdade (frame {frame.shape})")
+
+
+def test_driver_ffmpeg_falha_com_mensagem_util() -> None:
+    """
+    Sem ffmpeg no sistema, o driver precisa dizer o que fazer —
+    e não estourar exceção nem travar.
+    """
+    from src.drivers.ffmpeg_pipe import FfmpegPipeDriver, ffmpeg_disponivel
+
+    driver = FfmpegPipeDriver("rtsp://192.0.2.1:7070/webcam")
+    if ffmpeg_disponivel():
+        print("ok  ffmpeg presente (teste de ausência pulado)")
+        return
+
+    assert driver.connect() is False, "deveria falhar sem ffmpeg"
+    assert "ffmpeg" in driver.status.last_error.lower(),         f"mensagem pouco útil: {driver.status.last_error}"
+    assert "instale" in driver.status.last_error.lower(),         "a mensagem não diz como resolver"
+    print("ok  driver ffmpeg falha com mensagem útil")
+
+
+def test_todos_os_drivers_cumprem_o_contrato() -> None:
+    """Nenhum driver registrado pode esquecer um método do contrato."""
+    from src.drivers import REGISTRY
+    from src.drivers.base import BaseDroneDriver
+
+    for nome, fabrica in REGISTRY.items():
+        assert issubclass(fabrica, BaseDroneDriver), f"{nome} não herda do contrato"
+        for metodo in ("describe", "connect", "read", "disconnect"):
+            assert callable(getattr(fabrica, metodo, None)),                 f"{nome} não implementa {metodo}()"
+    print(f"ok  {len(REGISTRY)} drivers cumprem o contrato")
+
+
+
 if __name__ == "__main__":
     falhas = 0
     for nome, fn in list(globals().items()):
