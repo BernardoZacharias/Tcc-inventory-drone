@@ -13,7 +13,8 @@
     "dist": "npm run build:frontend && electron-builder",
     "dist:win": "npm run build:frontend && electron-builder --win",
     "dist:linux": "npm run build:frontend && electron-builder --linux",
-    "smoke": "electron scripts/smoke.js"
+    "smoke": "electron scripts/smoke.js",
+    "icone": "py scripts/gerar-icone.py"
   },
   "dependencies": {
     "dotenv": "^17.4.2"
@@ -63,19 +64,23 @@
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "icon": "build/icon.ico"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "icon": "build/icon.png"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Gestock Drone"
+      "shortcutName": "Gestock Drone",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
     }
   }
 }

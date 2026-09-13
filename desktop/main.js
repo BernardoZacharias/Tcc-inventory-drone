@@ -33,6 +33,8 @@ function criarJanela() {
     backgroundColor: "#050506",     // evita o flash branco antes do React montar
     show: false,
     title: "Gestock Drone",
+    icon: path.join(__dirname, "build",
+      process.platform === "win32" ? "icon.ico" : "icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,       // o renderer não recebe Node solto
