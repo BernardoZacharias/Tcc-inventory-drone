@@ -191,7 +191,8 @@ def main(argv: Optional[list] = None) -> int:
 
             ok, frame = engine.latest_novo()
 
-            if ok and mostrar and cv2 is not None:
+            # RawFrame (sem numpy) nao pode ir para o imshow
+            if ok and mostrar and cv2 is not None and hasattr(frame, "dtype"):
                 cv2.imshow(janela, frame)
                 if (cv2.waitKey(1) & 0xFF) == 27:  # ESC
                     break

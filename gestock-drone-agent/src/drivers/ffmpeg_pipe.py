@@ -31,6 +31,7 @@ import logging
 import re
 import shutil
 import subprocess
+import sys
 import threading
 from collections import deque
 from typing import Any, List, Optional, Tuple
@@ -38,6 +39,68 @@ from typing import Any, List, Optional, Tuple
 from .base import BaseDroneDriver, DriverInfo
 
 log = logging.getLogger(__name__)
+
+
+_NUMPY_OK: Optional[bool] = None
+
+
+def numpy_utilizavel() -> bool:
+    """
+    Diz se dá para importar numpy SEM derrubar o processo.
+
+    Por que em subprocesso: num binário incompatível com a CPU, o
+    `import numpy` morre com SIGILL — que NÃO é exceção Python. Um
+    try/except não pega; o processo inteiro cai. Então perguntamos a um
+    processo sacrificável primeiro, e só importamos aqui se ele voltar
+    vivo. O resultado fica em cache: o teste roda uma vez só.
+    """
+    global _NUMPY_OK
+    if _NUMPY_OK is None:
+        try:
+            r = subprocess.run([sys.executable, "-c", "import numpy"],
+                               capture_output=True, timeout=30)
+            _NUMPY_OK = r.returncode == 0
+        except Exception:  # noqa: BLE001
+            _NUMPY_OK = False
+        if not _NUMPY_OK:
+            log.warning(
+                "numpy indisponível nesta máquina (binário incompatível com a "
+                "CPU). Os frames virão como bytes crus: o marco 1 (conexão, "
+                "vídeo, reconexão) funciona, mas processar pixels vai exigir "
+                "consertar o numpy. Rode: python -m src.doctor"
+            )
+    return _NUMPY_OK
+
+
+class RawFrame:
+    """
+    Frame em bytes crus, para quando o numpy não está utilizável.
+
+    Mantém o pipeline vivo (contagem, FPS, reconexão, latência) sem
+    depender de numpy. Quem precisar de pixels chama `to_numpy()` —
+    que só funciona quando o numpy estiver consertado.
+    """
+
+    __slots__ = ("data", "width", "height")
+
+    def __init__(self, data: bytes, width: int, height: int) -> None:
+        self.data, self.width, self.height = data, width, height
+
+    @property
+    def shape(self) -> Tuple[int, int, int]:
+        return (self.height, self.width, 3)
+
+    @property
+    def nbytes(self) -> int:
+        return len(self.data)
+
+    def to_numpy(self):
+        import numpy as np
+
+        return np.frombuffer(self.data, dtype=np.uint8).reshape(self.shape)
+
+    def __repr__(self) -> str:
+        return f"RawFrame({self.width}x{self.height}, {len(self.data)} bytes)"
 
 
 def ffmpeg_disponivel() -> bool:
@@ -259,8 +322,6 @@ class FfmpegPipeDriver(BaseDroneDriver):
         return b"".join(pedacos)
 
     def read(self) -> Tuple[bool, Optional[Any]]:
-        import numpy as np
-
         if self._proc is None or not self.width or not self.height:
             return False, None
 
@@ -273,9 +334,19 @@ class FfmpegPipeDriver(BaseDroneDriver):
             self._status.connected = False
             return False, None
 
-        frame = np.frombuffer(cru, dtype=np.uint8).reshape((self.height, self.width, 3))
         self._mark_frame()
-        return True, frame
+
+        # Com numpy saudável entregamos ndarray, que é o que o QR Engine
+        # e o OpenCV esperam. Sem ele, entregamos os bytes crus: o vídeo
+        # continua chegando e o marco 1 segue verificável.
+        if numpy_utilizavel():
+            import numpy as np
+
+            return True, np.frombuffer(cru, dtype=np.uint8).reshape(
+                (self.height, self.width, 3)
+            )
+
+        return True, RawFrame(cru, self.width, self.height)
 
     def disconnect(self) -> None:
         proc = self._proc
