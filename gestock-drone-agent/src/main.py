@@ -67,8 +67,11 @@ def montar_driver(args: argparse.Namespace):
     # usa o ffmpeg do sistema em vez do embutido no OpenCV.
     usar_ffmpeg = args.backend == "ffmpeg"
     extras = {}
-    if usar_ffmpeg and args.width and args.height:
-        extras = {"width": args.width, "height": args.height}
+    if usar_ffmpeg:
+        if args.width and args.height:
+            extras.update(width=args.width, height=args.height)
+        if args.fps:
+            extras.update(fps_maximo=args.fps)
 
     if kind == "flow-ufo":
         nome = "flow-ufo-ffmpeg" if usar_ffmpeg else "flow-ufo"
@@ -124,6 +127,9 @@ def main(argv: Optional[list] = None) -> int:
                         "quebrar com 'illegal hardware instruction'")
     p.add_argument("--width", type=int, help="largura do frame (backend ffmpeg)")
     p.add_argument("--height", type=int, help="altura do frame (backend ffmpeg)")
+    p.add_argument("--fps", type=int,
+                   help="teto de quadros por segundo (backend ffmpeg). "
+                        "Para ler QR, 15-30 sobra")
     p.add_argument("--stall-timeout", type=float, default=5.0,
                    help="segundos sem frame válido até reconectar")
     p.add_argument("--max-reconnects", type=int, default=0,

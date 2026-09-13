@@ -189,6 +189,7 @@ class FfmpegPipeDriver(BaseDroneDriver):
         transport: str = "auto",
         width: Optional[int] = None,
         height: Optional[int] = None,
+        fps_maximo: Optional[int] = None,
         timeout_us: int = 5_000_000,
     ) -> None:
         super().__init__()
@@ -197,6 +198,7 @@ class FfmpegPipeDriver(BaseDroneDriver):
         self.width = width
         self.height = height
         self._forcado = bool(width and height)
+        self.fps_maximo = fps_maximo
         self.timeout_us = timeout_us
         self._proc: Optional[subprocess.Popen] = None
         self._stderr_thread: Optional[threading.Thread] = None
@@ -221,7 +223,20 @@ class FfmpegPipeDriver(BaseDroneDriver):
             "-timeout", str(self.timeout_us),
             "-i", self.url,
             "-an", "-sn",              # sem áudio, sem legenda
+            # Um frame de saída para cada frame de entrada, e só.
+            #
+            # Sem isto o ffmpeg usa "cfr" (taxa constante) e DUPLICA frames
+            # quando os timestamps da fonte são ruins — o que é a regra em
+            # firmware de drone barato. Medido no FLOW-UFO: ~842 fps de
+            # saída para uma câmera que entrega ~25. Eram frames repetidos
+            # queimando CPU, e 83% acabavam descartados.
+            "-fps_mode", "passthrough",
         ]
+
+        if self.fps_maximo:
+            # Teto opcional. Para ler QR, 15-30 fps sobra; acima disso é
+            # só custo de CPU.
+            cmd += ["-r", str(self.fps_maximo)]
 
         if self._forcado:
             # Resolução veio na mão. Forçamos a saída nesse tamanho com o
