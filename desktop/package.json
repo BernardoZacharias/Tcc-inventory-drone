@@ -1,0 +1,81 @@
+{
+  "name": "gestock-drone-desktop",
+  "version": "1.0.0",
+  "description": "Gestock Drone - aplicativo de inventario com drone",
+  "main": "main.js",
+  "author": "Bernardo Zacharias",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "cross-env GESTOCK_DEV=1 electron .",
+    "build:frontend": "cross-env GESTOCK_TARGET=desktop npm --prefix ../frontend run build",
+    "dist": "npm run build:frontend && electron-builder",
+    "dist:win": "npm run build:frontend && electron-builder --win",
+    "dist:linux": "npm run build:frontend && electron-builder --linux",
+    "smoke": "electron scripts/smoke.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "br.com.gestock.drone",
+    "productName": "Gestock Drone",
+    "directories": {
+      "output": "dist-app",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../frontend/dist",
+        "to": "frontend/dist"
+      },
+      {
+        "from": "../api-node",
+        "to": "api-node",
+        "filter": [
+          "**/*",
+          "!node_modules/.cache/**",
+          "!scripts/_*"
+        ]
+      },
+      {
+        "from": "../gestock-drone-agent",
+        "to": "gestock-drone-agent",
+        "filter": [
+          "**/*",
+          "!.venv/**",
+          "!**/__pycache__/**"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Gestock Drone"
+    }
+  }
+}
