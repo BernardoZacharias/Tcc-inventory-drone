@@ -1,0 +1,541 @@
+/* ════════════════════════════════════════════════════════════
+   GESTOCK — LOADING / TAKEOFF SEQUENCE
+   Uma narrativa curta: carga, inicialização, prontidão e voo.
+   ════════════════════════════════════════════════════════════ */
+
+body.gestock-is-loading {
+  overflow: hidden;
+}
+
+.gestock-loader {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-toast) + 100);
+  min-height: 100svh;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: clamp(22px, 4vw, 48px);
+  color: #eaf5ff;
+  color-scheme: dark;
+  isolation: isolate;
+  background:
+    radial-gradient(70rem 48rem at 50% 60%, rgba(34, 211, 238, 0.09), transparent 62%),
+    linear-gradient(145deg, #040507 0%, #071019 56%, #030507 100%);
+  opacity: 1;
+  transition: opacity 420ms var(--ease-fluid), visibility 420ms var(--ease-fluid);
+}
+
+/* O polish.css estiliza todos os filhos diretos de #root. Esta regra mantém
+   o loader como overlay de viewport mesmo quando aquela camada é carregada depois. */
+#root > .gestock-loader {
+  position: fixed;
+  z-index: calc(var(--z-toast) + 100);
+}
+
+.gestock-loader.is-departing {
+  opacity: 0;
+  transition-delay: 900ms;
+}
+
+body.gestock-is-loading .home .drone-craft {
+  opacity: 0;
+}
+
+body.gestock-is-loading.gestock-is-handoff .home .drone-craft {
+  animation: heroDroneReceive 440ms var(--ease-fluid) 1040ms both;
+}
+
+.gestock-loader__aurora,
+.gestock-loader__grid,
+.gestock-loader__noise {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.gestock-loader__aurora {
+  z-index: -3;
+  background:
+    radial-gradient(38rem 24rem at 15% 15%, rgba(34, 211, 238, 0.14), transparent 72%),
+    radial-gradient(32rem 24rem at 88% 8%, rgba(167, 139, 250, 0.10), transparent 72%);
+  animation: loaderAurora 7s ease-in-out infinite alternate;
+}
+
+.gestock-loader__grid {
+  z-index: -2;
+  background-image:
+    linear-gradient(rgba(103, 232, 249, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(103, 232, 249, 0.045) 1px, transparent 1px);
+  background-size: 52px 52px;
+  transform: perspective(560px) rotateX(62deg) scale(1.45) translateY(19%);
+  transform-origin: center bottom;
+  mask-image: linear-gradient(to bottom, transparent 5%, #000 52%, #000 100%);
+}
+
+.gestock-loader__noise {
+  z-index: -1;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
+}
+
+.gestock-loader__brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  position: relative;
+  z-index: 2;
+}
+
+.gestock-loader__brand img {
+  display: block;
+  width: auto;
+  height: clamp(28px, 4vw, 40px);
+  object-fit: contain;
+}
+
+.gestock-loader__brand span {
+  padding: 7px 12px;
+  border: 1px solid rgba(103, 232, 249, 0.18);
+  border-radius: var(--radius-full);
+  color: #8ea3ba;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.gestock-loader__content {
+  width: min(720px, 100%);
+  margin: auto;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.gestock-loader__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #8ea3ba;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.gestock-loader__eyebrow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22d3ee;
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.9);
+  animation: loaderStatus 1.15s ease-in-out infinite;
+}
+
+.gestock-loader__stage {
+  position: relative;
+  width: min(720px, 100vw - 32px);
+  height: clamp(250px, 42vh, 355px);
+  margin-top: clamp(8px, 1.8vh, 20px);
+}
+
+.gestock-loader__route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  opacity: 0;
+  transition: opacity 380ms ease;
+}
+
+.gestock-loader.is-ready .gestock-loader__route {
+  opacity: 0.5;
+}
+
+.gestock-loader__route path {
+  stroke: rgba(103, 232, 249, 0.55);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 4 10;
+  animation: loaderRoute 1.2s linear infinite;
+}
+
+.gestock-loader__route circle {
+  fill: #67e8f9;
+  filter: drop-shadow(0 0 8px #22d3ee);
+}
+
+.gestock-loader__drone-unit {
+  --handoff-x: 28vw;
+  --handoff-y: -8vh;
+  --handoff-scale: 1;
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 34%;
+  width: clamp(230px, 48vw, 350px);
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  transition: filter 400ms ease;
+  filter: drop-shadow(0 26px 25px rgba(0, 0, 0, 0.48));
+}
+
+.gestock-loader.is-ready .gestock-loader__drone-unit {
+  animation: loaderHover 1.8s ease-in-out infinite;
+  filter:
+    drop-shadow(0 32px 28px rgba(0, 0, 0, 0.38))
+    drop-shadow(0 0 16px rgba(34, 211, 238, 0.18));
+}
+
+.gestock-loader.is-departing .gestock-loader__drone-unit {
+  animation: loaderTakeoff 1.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.gestock-loader__drone {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.gestock-loader.is-ready .gestock-loader__drone {
+  filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.16));
+}
+
+.gestock-loader.is-departing .gestock-loader__brand,
+.gestock-loader.is-departing .gestock-loader__eyebrow,
+.gestock-loader.is-departing .gestock-loader__copy,
+.gestock-loader.is-departing .gestock-loader__progress,
+.gestock-loader.is-departing .gestock-loader__footer,
+.gestock-loader.is-departing .gestock-loader__dock,
+.gestock-loader.is-departing .gestock-loader__particle {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 260ms ease, transform 360ms var(--ease-fluid);
+}
+
+.gestock-loader__charge-beam {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 57px;
+  width: clamp(70px, 14vw, 110px);
+  height: clamp(100px, 18vh, 150px);
+  transform: translateX(-50%);
+  background: linear-gradient(to top, rgba(34, 211, 238, 0.34), transparent 82%);
+  clip-path: polygon(35% 100%, 65% 100%, 96% 0, 4% 0);
+  filter: blur(1px);
+  opacity: 0.7;
+  animation: loaderBeam 1.5s ease-in-out infinite;
+  transition: opacity 240ms ease, transform 500ms var(--ease-out);
+}
+
+.gestock-loader.is-ready .gestock-loader__charge-beam,
+.gestock-loader.is-departing .gestock-loader__charge-beam {
+  opacity: 0;
+  transform: translateX(-50%) scaleY(0.2);
+}
+
+.gestock-loader__dock {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 28px;
+  width: clamp(148px, 28vw, 218px);
+  aspect-ratio: 2.4 / 1;
+  transform: translateX(-50%) perspective(220px) rotateX(64deg);
+  border: 1px solid rgba(103, 232, 249, 0.55);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(34, 211, 238, 0.18) 0 20%, transparent 21%),
+    rgba(4, 17, 25, 0.72);
+  box-shadow:
+    inset 0 0 24px rgba(34, 211, 238, 0.22),
+    0 0 34px rgba(34, 211, 238, 0.14);
+}
+
+.gestock-loader__dock-ring {
+  position: absolute;
+  inset: 13%;
+  border: 1px dashed rgba(103, 232, 249, 0.48);
+  border-radius: 50%;
+  animation: loaderDock 5s linear infinite;
+}
+
+.gestock-loader__dock-ring.ring-two {
+  inset: 28%;
+  animation-direction: reverse;
+  animation-duration: 3.4s;
+}
+
+.gestock-loader__dock-core {
+  position: absolute;
+  inset: 36%;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #22d3ee;
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.75);
+}
+
+.gestock-loader__dock-core span {
+  color: #04141a;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 800;
+}
+
+.gestock-loader__rotor-wash {
+  position: absolute;
+  z-index: -1;
+  top: 28%;
+  width: 34%;
+  height: 45%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(103, 232, 249, 0.22), transparent 70%);
+  filter: blur(12px);
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.gestock-loader__rotor-wash.wash-left { left: 5%; }
+.gestock-loader__rotor-wash.wash-right { right: 5%; }
+.gestock-loader.is-ready .gestock-loader__rotor-wash { opacity: 0.72; }
+
+.gestock-loader__particle {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  bottom: 28%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #67e8f9;
+  box-shadow: 0 0 8px #22d3ee;
+  opacity: 0;
+}
+
+.gestock-loader.is-ready .gestock-loader__particle {
+  animation: loaderParticle 1.2s ease-out infinite;
+}
+
+.gestock-loader__particle.particle-one { margin-left: -75px; animation-delay: 80ms; }
+.gestock-loader__particle.particle-two { margin-left: 44px; animation-delay: 360ms; }
+.gestock-loader__particle.particle-three { margin-left: 90px; animation-delay: 670ms; }
+
+.gestock-loader__copy {
+  margin-top: clamp(-8px, -1vh, 0px);
+  min-height: 58px;
+}
+
+.gestock-loader__phase {
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.4vw, 1.55rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  animation: loaderCopy 330ms var(--ease-out) both;
+}
+
+.gestock-loader__caption {
+  margin-top: 7px;
+  color: #758ba2;
+  font-size: clamp(0.76rem, 1.6vw, 0.87rem);
+}
+
+.gestock-loader__progress {
+  width: min(470px, calc(100vw - 48px));
+  margin-top: clamp(16px, 2.6vh, 26px);
+}
+
+.gestock-loader__track {
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.gestock-loader__track span {
+  display: block;
+  position: relative;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0e7490, #22d3ee 70%, #d5fbff);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.72);
+  transition: width 180ms ease-out;
+}
+
+.gestock-loader__track span::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d5fbff;
+  box-shadow: 0 0 18px #22d3ee;
+}
+
+.gestock-loader__progress-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 9px;
+  color: #64788f;
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.13em;
+}
+
+.gestock-loader__progress-meta strong {
+  color: #67e8f9;
+  font-size: 0.7rem;
+}
+
+.gestock-loader__footer {
+  display: flex;
+  justify-content: center;
+  gap: clamp(14px, 4vw, 42px);
+  color: #566a80;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.gestock-loader__footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gestock-loader__footer span::before {
+  content: "";
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #22d3ee;
+  box-shadow: 0 0 7px rgba(34, 211, 238, 0.7);
+}
+
+@keyframes loaderAurora {
+  from { transform: translate3d(-2%, -1%, 0) scale(1); }
+  to   { transform: translate3d(2%, 1.5%, 0) scale(1.06); }
+}
+
+@keyframes loaderStatus {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.72); }
+}
+
+@keyframes loaderRoute {
+  to { stroke-dashoffset: -28; }
+}
+
+@keyframes loaderBeam {
+  0%, 100% { opacity: 0.45; transform: translateX(-50%) scaleX(0.86); }
+  50% { opacity: 0.82; transform: translateX(-50%) scaleX(1.08); }
+}
+
+@keyframes loaderDock {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes loaderHover {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0) rotate(-0.4deg); }
+  50% { transform: translate(-50%, -50%) translateY(-9px) rotate(0.5deg); }
+}
+
+@keyframes loaderTakeoff {
+  0% { transform: translate(-50%, -50%) translate3d(0, 0, 0) rotate(0deg) scale(1); opacity: 1; }
+  16% { transform: translate(-50%, -50%) translate3d(0, -26px, 0) rotate(-1.6deg) scale(1.025); opacity: 1; }
+  100% { transform: translate(-50%, -50%) translate3d(var(--handoff-x), var(--handoff-y), 0) rotate(0deg) scale(var(--handoff-scale)); opacity: 1; }
+}
+
+@keyframes heroDroneReceive {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes loaderParticle {
+  0% { opacity: 0; transform: translate3d(0, -10px, 0) scale(0.5); }
+  25% { opacity: 0.8; }
+  100% { opacity: 0; transform: translate3d(-12px, 90px, 0) scale(1.4); }
+}
+
+@keyframes loaderCopy {
+  from { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+
+@media (max-width: 640px) {
+  .gestock-loader {
+    padding: 20px;
+  }
+
+  .gestock-loader__brand span {
+    font-size: 0.55rem;
+  }
+
+  .gestock-loader__stage {
+    height: min(330px, 42vh);
+    min-height: 240px;
+  }
+
+  .gestock-loader__drone-unit {
+    width: min(280px, 78vw);
+  }
+
+  .gestock-loader__footer span:nth-child(2) {
+    display: none;
+  }
+
+  .gestock-loader__footer {
+    justify-content: space-between;
+    font-size: 0.52rem;
+  }
+
+  @keyframes loaderTakeoff {
+    0% { transform: translate(-50%, -50%) translate3d(0, 0, 0) rotate(0deg) scale(1); opacity: 1; }
+    16% { transform: translate(-50%, -50%) translate3d(0, -22px, 0) rotate(-1.4deg) scale(1.02); opacity: 1; }
+    100% { transform: translate(-50%, -50%) translate3d(var(--handoff-x), var(--handoff-y), 0) rotate(0deg) scale(var(--handoff-scale)); opacity: 1; }
+  }
+}
+
+@media (max-height: 680px) {
+  .gestock-loader__stage {
+    height: 260px;
+  }
+
+  .gestock-loader__drone-unit {
+    width: 250px;
+  }
+
+  .gestock-loader__footer {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gestock-loader *,
+  .gestock-loader *::before,
+  .gestock-loader *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+
+  .gestock-loader.is-departing {
+    transition-delay: 0ms;
+  }
+
+  .gestock-loader.is-departing .gestock-loader__drone-unit {
+    opacity: 0;
+  }
+}

@@ -1,0 +1,136 @@
+/* ════════════════════════════════════════════════════════════
+   CursorDrone — quadricóptero que acompanha o ponteiro
+   ────────────────────────────────────────────────────────────
+   Só transform e opacity são animados (GPU). O componente inteiro
+   é pointer-events:none, então nunca rouba clique nem hover.
+   ════════════════════════════════════════════════════════════ */
+
+.cursor-drone {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-overlay);
+  pointer-events: none;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  transition: opacity 420ms var(--ease-fluid);
+  /* a cor da marca alimenta os discos das hélices e o feixe */
+  color: var(--accent);
+  will-change: transform;
+}
+.cursor-drone.is-on { opacity: 1; }
+
+/* ── Corpo ─────────────────────────────────────────────────── */
+.cd-body {
+  position: absolute;
+  left: -56px;               /* centraliza o SVG no ponto de voo */
+  top: -38px;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45));
+}
+
+.cd-svg { display: block; overflow: visible; }
+
+/* ── Hélices ───────────────────────────────────────────────── */
+/* Pares girando em sentidos opostos, como num quadricóptero real
+   (senão a fuselagem giraria junto por torque). */
+.cd-prop {
+  animation: cdSpin 0.16s linear infinite;
+}
+.cd-prop.ccw { animation-direction: reverse; }
+
+@keyframes cdSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Luzes de navegação ────────────────────────────────────── */
+.cd-nav-front {
+  fill: #34d399;
+  filter: drop-shadow(0 0 5px #34d399);
+  animation: cdBlink 2.4s ease-in-out infinite;
+}
+.cd-nav-rear {
+  fill: #fb7185;
+  filter: drop-shadow(0 0 4px #fb7185);
+  animation: cdBlink 1.2s ease-in-out infinite;
+}
+@keyframes cdBlink {
+  0%, 44%, 100% { opacity: 1; }
+  55%, 70%      { opacity: 0.25; }
+}
+
+/* ── Sombra no "chão" ──────────────────────────────────────── */
+.cd-shadow {
+  position: absolute;
+  left: -26px;
+  top: 34px;
+  width: 52px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55), transparent 72%);
+  opacity: 0.3;
+  will-change: transform, opacity;
+}
+
+/* ── Feixe do scanner ──────────────────────────────────────── */
+/* Nasce da câmera e aponta para o cursor (que fica embaixo/à
+   esquerda por causa do offset). Só acende sobre algo clicável. */
+.cd-beam {
+  position: absolute;
+  left: -6px;
+  top: 8px;
+  width: 3px;
+  height: 46px;
+  border-radius: 2px;
+  transform-origin: 50% 0;
+  transform: rotate(28deg) scaleY(0);
+  opacity: 0;
+  background: linear-gradient(180deg, var(--accent), transparent);
+  box-shadow: 0 0 14px var(--accent);
+  transition: transform 260ms var(--ease-fluid), opacity 260ms var(--ease-fluid);
+}
+.cursor-drone.is-locked .cd-beam {
+  transform: rotate(28deg) scaleY(1);
+  opacity: 0.75;
+}
+
+/* ── Retículo de mira ──────────────────────────────────────── */
+.cd-reticle {
+  position: absolute;
+  left: -46px;
+  top: 38px;
+  width: 30px;
+  height: 30px;
+  opacity: 0;
+  transform: scale(1.5) rotate(-8deg);
+  transition: opacity 200ms var(--ease-fluid), transform 320ms var(--ease-fluid);
+}
+.cursor-drone.is-locked .cd-reticle {
+  opacity: 0.9;
+  transform: scale(1) rotate(0deg);
+}
+.cd-reticle span {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--accent);
+}
+.cd-reticle span:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+.cd-reticle span:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+.cd-reticle span:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+.cd-reticle span:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+/* Travado: o drone desce um pouco e "inspeciona" o alvo */
+.cursor-drone.is-locked .cd-body {
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.5))
+          drop-shadow(0 0 18px var(--accent-line));
+}
+/* Rotores aceleram ao travar (o drone segura posição com mais empuxo) */
+.cursor-drone.is-locked .cd-prop { animation-duration: 0.11s; }
+
+/* ── Sem mouse ou com movimento reduzido: não renderiza ────── */
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .cursor-drone { display: none; }
+}

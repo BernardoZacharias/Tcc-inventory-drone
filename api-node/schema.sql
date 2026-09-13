@@ -1,0 +1,229 @@
+-- -- ============================================================
+-- --  GESTOCK DRONE - Schema completo do banco de dados
+-- --
+-- --  COMO USAR:
+-- --    Abra este arquivo no MySQL Workbench e execute TUDO
+-- --    (raio / Ctrl+Shift+Enter). Ele RECRIA todas as tabelas
+-- --    com a estrutura correta. As tabelas antigas são apagadas
+-- --    e os dados de exemplo abaixo repopulam o banco.
+-- -- ============================================================
+
+-- CREATE DATABASE IF NOT EXISTS gestock_drone
+--   DEFAULT CHARACTER SET utf8mb4
+--   COLLATE utf8mb4_unicode_ci;
+
+-- USE gestock_drone;
+
+-- -- ────────────────────────────────────────────────
+-- --  Remove as tabelas antigas (ordem segura via FK off)
+-- -- ────────────────────────────────────────────────
+-- SET FOREIGN_KEY_CHECKS = 0;
+-- DROP TABLE IF EXISTS leituras;
+-- DROP TABLE IF EXISTS operadores;
+-- DROP TABLE IF EXISTS setores;
+-- DROP TABLE IF EXISTS operacoes;
+-- DROP TABLE IF EXISTS relatorios;
+-- DROP TABLE IF EXISTS alertas;
+-- DROP TABLE IF EXISTS drones;
+-- DROP TABLE IF EXISTS empresas;
+-- DROP TABLE IF EXISTS usuarios;
+-- SET FOREIGN_KEY_CHECKS = 1;
+
+-- -- ────────────────────────────────────────────────
+-- --  USUÁRIOS  (autenticação + perfil de acesso)
+-- -- ────────────────────────────────────────────────
+-- CREATE TABLE usuarios (
+--   id            INT AUTO_INCREMENT PRIMARY KEY,
+--   nome          VARCHAR(120) NOT NULL,
+--   email         VARCHAR(160) NOT NULL UNIQUE,
+--   senha         VARCHAR(255) NOT NULL,
+--   perfil        ENUM('admin','operador') DEFAULT 'operador',
+--   empresa_id    INT DEFAULT NULL,           -- NULL = acesso a todas (admin)
+--   criado_em     DATETIME DEFAULT CURRENT_TIMESTAMP
+-- ) ENGINE=InnoDB;
+
+-- -- ────────────────────────────────────────────────
+-- --  EMPRESAS  (clientes / contas)
+-- -- ────────────────────────────────────────────────
+-- CREATE TABLE empresas (
+--   id            INT AUTO_INCREMENT PRIMARY KEY,
+--   nome          VARCHAR(160) NOT NULL,
+--   cnpj          VARCHAR(20)  DEFAULT NULL,
+--   segmento      VARCHAR(80)  DEFAULT NULL,
+--   responsavel   VARCHAR(120) DEFAULT NULL,
+--   email         VARCHAR(160) DEFAULT NULL,
+--   telefone      VARCHAR(30)  DEFAULT NULL,
+--   observacao    TEXT         DEFAULT NULL,
+--   ativo         TINYINT(1)   DEFAULT 1,
+--   criado_em     DATETIME     DEFAULT CURRENT_TIMESTAMP
+-- ) ENGINE=InnoDB;
+
+-- -- ────────────────────────────────────────────────
+-- --  SETORES  (áreas internas de cada empresa)
+-- -- ────────────────────────────────────────────────
+-- CREATE TABLE setores (
+--   id            INT AUTO_INCREMENT PRIMARY KEY,
+--   nome          VARCHAR(120) NOT NULL,
+--   empresa_id    INT DEFAULT NULL,
+--   criado_em     DATETIME DEFAULT CURRENT_TIMESTAMP,
+--   CONSTRAINT fk_setor_empresa FOREIGN KEY (empresa_id)
+--       REFERENCES empresas(id) ON DELETE SET NULL
+-- ) ENGINE=InnoDB;
+
+-- -- ────────────────────────────────────────────────
+-- --  OPERADORES  (quem faz as leituras, com permissões)
+-- -- ────────────────────────────────────────────────
+-- CREATE TABLE operadores (
+--   id            INT AUTO_INCREMENT PRIMARY KEY,
+--   nome          VARCHAR(120) NOT NULL,
+--   email         VARCHAR(160) UNIQUE,
+--   senha         VARCHAR(255) DEFAULT '123456',
+--   empresa_id    INT DEFAULT NULL,
+--   setor_id      INT DEFAULT NULL,
+--   permissoes    VARCHAR(255) DEFAULT 'leitura',
+--   ativo         TINYINT(1)   DEFAULT 1,
+--   criado_em     DATETIME DEFAULT CURRENT_TIMESTAMP,
+--   CONSTRAINT fk_operador_empresa FOREIGN KEY (empresa_id)
+--       REFERENCES empresas(id) ON DELETE SET NULL,
+--   CONSTRAINT fk_operador_setor FOREIGN KEY (setor_id)
+--       REFERENCES setores(id) ON DELETE SET NULL
+-- ) ENGINE=InnoDB;
+
+-- -- ────────────────────────────────────────────────
+-- --  LEITURAS  (QR estruturado: cada campo em sua coluna)
+-- -- ────────────────────────────────────────────────
+-- CREATE TABLE leituras (
+--   id                INT AUTO_INCREMENT PRIMARY KEY,
+--   empresa_id        INT DEFAULT NULL,
+--   operador_id       INT DEFAULT NULL,
+--   setor_id          INT DEFAULT NULL,
+--   codigo_qr         TEXT,                       -- texto bruto original do QR
+--   produto_id        VARCHAR(60)  DEFAULT NULL,  -- dados extraídos do QR:
+--   nome_produto      VARCHAR(180) DEFAULT NULL,
+--   quantidade        INT          DEFAULT NULL,
+--   fragil            VARCHAR(10)  DEFAULT NULL,
+--   empresa_qr        VARCHAR(160) DEFAULT NULL,  -- empresa informada no QR
+--   local_lido        VARCHAR(180) DEFAULT NULL,  -- local informado no QR
+--   origem            VARCHAR(40)  DEFAULT 'DRONE',
+--   status            VARCHAR(40)  DEFAULT 'lido',
+--   data_hora_leitura DATETIME     DEFAULT CURRENT_TIMESTAMP,
+--   criado_em         DATETIME     DEFAULT CURRENT_TIMESTAMP,
+--   CONSTRAINT fk_leitura_empresa FOREIGN KEY (empresa_id)
+--       REFERENCES empresas(id) ON DELETE CASCADE,
+--   CONSTRAINT fk_leitura_operador FOREIGN KEY (operador_id)
+--       REFERENCES operadores(id) ON DELETE SET NULL,
+--   CONSTRAINT fk_leitura_setor FOREIGN KEY (setor_id)
+--       REFERENCES setores(id) ON DELETE SET NULL
+-- ) ENGINE=InnoDB;
+
+-- -- ────────────────────────────────────────────────
+-- --  OPERAÇÕES  (voos / sessões do drone)
+-- -- ────────────────────────────────────────────────
+-- CREATE TABLE operacoes (
+--   id            INT AUTO_INCREMENT PRIMARY KEY,
+--   empresa_id    INT NOT NULL,
+--   titulo        VARCHAR(160) NOT NULL,
+--   descricao     TEXT,
+--   status        ENUM('agendada','em_andamento','concluida','cancelada')
+--                 DEFAULT 'agendada',
+--   piloto        VARCHAR(120),
+--   area_voo      VARCHAR(120),
+--   iniciada_em   DATETIME,
+--   finalizada_em DATETIME,
+--   total_leituras INT DEFAULT 0,
+--   criado_em     DATETIME DEFAULT CURRENT_TIMESTAMP,
+--   CONSTRAINT fk_operacao_empresa FOREIGN KEY (empresa_id)
+--       REFERENCES empresas(id) ON DELETE CASCADE
+-- ) ENGINE=InnoDB;
+
+-- -- ────────────────────────────────────────────────
+-- --  RELATÓRIOS  (sumários gerados pelo sistema)
+-- -- ────────────────────────────────────────────────
+-- CREATE TABLE relatorios (
+--   id            INT AUTO_INCREMENT PRIMARY KEY,
+--   empresa_id    INT NOT NULL,
+--   titulo        VARCHAR(160) NOT NULL,
+--   tipo          ENUM('diario','semanal','mensal','customizado')
+--                 DEFAULT 'customizado',
+--   periodo_ini   DATE,
+--   periodo_fim   DATE,
+--   total_lidos   INT DEFAULT 0,
+--   total_erros   INT DEFAULT 0,
+--   observacao    TEXT,
+--   gerado_por    VARCHAR(120),
+--   criado_em     DATETIME DEFAULT CURRENT_TIMESTAMP,
+--   CONSTRAINT fk_relatorio_empresa FOREIGN KEY (empresa_id)
+--       REFERENCES empresas(id) ON DELETE CASCADE
+-- ) ENGINE=InnoDB;
+
+-- -- ────────────────────────────────────────────────
+-- --  ALERTAS  (eventos / notificações operacionais)
+-- -- ────────────────────────────────────────────────
+-- CREATE TABLE alertas (
+--   id            INT AUTO_INCREMENT PRIMARY KEY,
+--   empresa_id    INT,
+--   tipo          ENUM('info','aviso','critico') DEFAULT 'info',
+--   mensagem      VARCHAR(255) NOT NULL,
+--   lido          TINYINT(1)   DEFAULT 0,
+--   criado_em     DATETIME     DEFAULT CURRENT_TIMESTAMP,
+--   CONSTRAINT fk_alerta_empresa FOREIGN KEY (empresa_id)
+--       REFERENCES empresas(id) ON DELETE SET NULL
+-- ) ENGINE=InnoDB;
+
+-- -- ────────────────────────────────────────────────
+-- --  DRONES  (frota disponível)
+-- -- ────────────────────────────────────────────────
+-- CREATE TABLE drones (
+--   id            INT AUTO_INCREMENT PRIMARY KEY,
+--   modelo        VARCHAR(120) NOT NULL,
+--   serial        VARCHAR(60)  UNIQUE,
+--   bateria_pct   INT          DEFAULT 100,
+--   status        ENUM('disponivel','voando','manutencao','inativo')
+--                 DEFAULT 'disponivel',
+--   ultimo_voo    DATETIME,
+--   criado_em     DATETIME DEFAULT CURRENT_TIMESTAMP
+-- ) ENGINE=InnoDB;
+
+-- -- ────────────────────────────────────────────────
+-- --  DADOS INICIAIS DE EXEMPLO
+-- -- ────────────────────────────────────────────────
+-- INSERT INTO usuarios (id, nome, email, senha, perfil, empresa_id) VALUES
+--   (1, 'Administrador',  'admin@gestock.com.br',     '123456', 'admin',    NULL),
+--   (2, 'Vanderlei Silva','vanderlei@gestock.com.br', '123456', 'operador', 2);
+
+-- INSERT INTO empresas (id, nome, cnpj, segmento, responsavel, email) VALUES
+--   (1, 'Gestock Logística',     '12.345.678/0001-90', 'Operação logística',      'Carlos Lima', 'carlos@gestock.com.br'),
+--   (2, 'Empresa Alpha',         '98.765.432/0001-11', 'Centro de distribuição',  'Ana Souza',   'ana@alpha.com.br'),
+--   (3, 'Cliente Demonstração',  NULL,                 'Estoque técnico',         NULL,          NULL);
+
+-- INSERT INTO setores (id, nome, empresa_id) VALUES
+--   (1, 'Recebimento', 2),
+--   (2, 'Expedição',   1),
+--   (3, 'Armazenagem', 1);
+
+-- INSERT INTO operadores (id, nome, email, senha, empresa_id, setor_id, permissoes) VALUES
+--   (1, 'Vanderlei Silva', 'vanderlei@gestock.com.br', '123456', 2, 1, 'leitura'),
+--   (2, 'Carlos Lima',     'carlos@gestock.com.br',    '123456', 1, 2, 'leitura,relatorios');
+
+-- INSERT INTO drones (id, modelo, serial, bateria_pct, status) VALUES
+--   (1, 'DJI Mavic 3 Enterprise', 'DJI-MV3-001', 92, 'disponivel'),
+--   (2, 'Skydio X10',             'SKY-X10-014', 78, 'manutencao'),
+--   (3, 'Parrot Anafi Ai',        'PRT-ANF-022', 100,'disponivel');
+
+-- -- ────────────────────────────────────────────────
+-- --  Leituras de exemplo (QR já estruturado)
+-- -- ────────────────────────────────────────────────
+-- INSERT INTO leituras
+--   (empresa_id, operador_id, setor_id, codigo_qr, produto_id, nome_produto,
+--    quantidade, fragil, empresa_qr, local_lido, origem, status)
+-- VALUES
+--   (1, 2, 2,
+--    'PRODUTO ID: 12345 Nome: Teclado Logitech Quantidade: 50 Frágil: Não Empresa: Logitech Local: Corredor A - Prateleira 3',
+--    '12345', 'Teclado Logitech', 50, 'Não', 'Logitech', 'Corredor A - Prateleira 3', 'DRONE', 'lido'),
+--   (1, 2, 3,
+--    'PRODUTO ID: 12346 Nome: Monitor Dell 24 Quantidade: 18 Frágil: Sim Empresa: Dell Local: Corredor B - Prateleira 1',
+--    '12346', 'Monitor Dell 24', 18, 'Sim', 'Dell', 'Corredor B - Prateleira 1', 'DRONE', 'lido'),
+--   (2, 1, 1,
+--    'PRODUTO ID: 20011 Nome: Caixa de Parafusos Quantidade: 200 Frágil: Não Empresa: Alpha Suprimentos Local: Doca 2 - Pallet 7',
+--    '20011', 'Caixa de Parafusos', 200, 'Não', 'Alpha Suprimentos', 'Doca 2 - Pallet 7', 'DRONE', 'lido');
+-- 

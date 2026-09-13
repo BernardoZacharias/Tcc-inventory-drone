@@ -1,0 +1,92 @@
+.operations-feedback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin: 18px 0;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: var(--surface-1);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.operations-feedback > svg { flex-shrink: 0; color: var(--cyan); }
+.operations-feedback > span { flex: 1; }
+.operations-feedback small { display: block; color: var(--muted); }
+.operations-feedback.is-error { border-color: var(--amber); color: var(--text); }
+.operations-feedback.is-error > svg { color: var(--amber); }
+.operations-feedback button,
+.operations-search button,
+.operations-empty-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface-2);
+  font-size: 12px;
+}
+.operations-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin: 0 0 16px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--surface-1);
+  color: var(--muted);
+}
+.operations-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  margin: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.operations-search:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 3px var(--accent-soft); }
+.operations-search button { min-height: 30px; padding: 4px 8px; }
+.operations-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.operations-page .panel-box { min-width: 0; }
+.operations-page .form-panel { align-self: start; }
+.operations-page .form-note { font-size: 12px; line-height: 1.65; color: var(--muted); margin: 0 0 12px; }
+.operations-page button:disabled { cursor: wait; opacity: .6; transform: none; }
+.operations-page :is(button, input, select, textarea):focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.operations-page :is(.icon-btn, .op-actions button, .filter-tabs button, .perm-chip) { min-height: 36px; }
+.operations-page .icon-btn { min-width: 36px; }
+.operations-page :is(input, select, textarea) { color: var(--text); }
+.operations-page select { background-color: var(--bg-2); color-scheme: dark; }
+.operations-page select option { background: var(--bg-2); color: var(--text); }
+[data-theme="light"] .operations-page select { color-scheme: light; }
+.operations-page :is(.operator-email, .op-desc, .alert-body p, .rs-body b, .report-meta, .company-name) { overflow-wrap: anywhere; }
+.operations-page .alert-card.read { opacity: 1; background: var(--surface-1); }
+.operations-page .alert-card.read::before { opacity: .4; box-shadow: none; }
+.operations-page .companies-table-wrap { overflow-x: auto; }
+.operations-page .companies-table { min-width: 440px; }
+.operations-page .company-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.operations-filter-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+.operations-filter-row .operations-search { flex: 1 1 220px; margin: 0; }
+.operations-filter-row > select { padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 10px; min-height: 44px; }
+.operations-result-count { display: block; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.operations-spinner { animation: operations-spin 1s linear infinite; }
+@keyframes operations-spin { to { transform: rotate(360deg); } }
+@media (max-width: 640px) {
+  .operations-feedback { flex-wrap: wrap; }
+  .operations-feedback > span { flex-basis: calc(100% - 32px); }
+  .operations-page .company-metrics { grid-template-columns: 1fr; }
+  .operations-page .companies-list { padding: 18px; }
+  .operations-page .readings-tools, .operations-page .search-wrap { width: 100%; }
+  .operations-page .search-wrap input { min-width: 0; width: 100%; }
+  .operations-page .setor-add > * { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .operations-spinner { animation: none; } }

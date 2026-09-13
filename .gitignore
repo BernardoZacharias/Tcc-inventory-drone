@@ -1,0 +1,40 @@
+# ──────────────────────────────────────────────
+#  Gestock Drone — .gitignore raiz
+# ──────────────────────────────────────────────
+
+# Dependências
+node_modules/
+**/node_modules/
+
+# Artefatos de build do frontend (gerados por `npm run build`)
+frontend/dist/
+dist/
+
+# Variáveis de ambiente / segredos  ← NUNCA versionar
+.env
+.env.*
+!.env.example
+**/.env
+!**/.env.example
+
+# Python (vision-python)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editores / IDE
+.vscode/
+.idea/
+*.swp

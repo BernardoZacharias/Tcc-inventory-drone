@@ -1,0 +1,276 @@
+/* ════════════════════════════════════════════════════════════
+   GESTOCK — CONTINUIDADE DAS PÁGINAS INSTITUCIONAIS
+   Home, Sobre, Tecnologia e Contato compartilham a mesma luz.
+   As seções mudam de profundidade, nunca invertem de tema.
+   ════════════════════════════════════════════════════════════ */
+
+.home,
+.about-page,
+.technology-page,
+.contact-page {
+  min-height: 100vh;
+  color: var(--text);
+  background:
+    radial-gradient(70rem 52rem at 86% 4%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 68%),
+    radial-gradient(60rem 42rem at 8% 48%, color-mix(in srgb, var(--green) 3%, transparent), transparent 72%),
+    linear-gradient(180deg, var(--bg-0), color-mix(in srgb, var(--bg-1) 54%, var(--bg-0)) 48%, var(--bg-0));
+}
+
+/* Um único clima para as quatro aberturas. */
+.hero,
+.about-hero,
+.technology-hero,
+.contact-hero {
+  color: var(--text);
+  background:
+    radial-gradient(54rem 38rem at 82% 18%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 68%),
+    radial-gradient(46rem 34rem at 13% 84%, color-mix(in srgb, var(--green) 5%, transparent), transparent 72%),
+    linear-gradient(180deg, var(--bg-0) 0%, color-mix(in srgb, var(--bg-1) 66%, var(--bg-0)) 100%);
+}
+
+.hero-grid,
+.about-hero::before,
+.technology-hero::before,
+.contact-hero::before {
+  opacity: 0.22;
+  -webkit-mask-image: linear-gradient(180deg, transparent 2%, #000 28%, #000 72%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 2%, #000 28%, #000 72%, transparent 100%);
+}
+
+/* As seções inferiores deixam o canvas da página aparecer. A diferença de
+   profundidade vem de uma névoa de 2–4%, não de preto versus branco. */
+.home > .section,
+.home > .tech-section,
+.home > .final-cta,
+.about-section,
+.about-tech,
+.about-benefits,
+.technology-section,
+.technology-flow-section,
+.technology-architecture,
+.technology-future,
+.contact-section {
+  position: relative;
+  color: var(--text);
+  background:
+    radial-gradient(46rem 24rem at 50% 0%, color-mix(in srgb, var(--accent) 3.5%, transparent), transparent 72%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-1) 26%, transparent), transparent 30%, transparent 74%, color-mix(in srgb, var(--bg-1) 20%, transparent));
+}
+
+.home > .tech-section,
+.about-tech,
+.technology-flow-section,
+.technology-architecture,
+.contact-section {
+  background:
+    radial-gradient(50rem 28rem at 18% 28%, color-mix(in srgb, var(--accent) 4.5%, transparent), transparent 74%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-1) 18%, transparent), color-mix(in srgb, var(--bg-1) 42%, transparent), color-mix(in srgb, var(--bg-1) 16%, transparent));
+}
+
+.technology-section.light,
+.technology-future.light {
+  color: var(--text);
+  background:
+    radial-gradient(44rem 24rem at 50% 0%, color-mix(in srgb, var(--accent) 3%, transparent), transparent 72%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-1) 24%, transparent), transparent 58%, color-mix(in srgb, var(--bg-1) 18%, transparent));
+}
+
+/* Divisor atmosférico: marca a mudança de assunto sem criar uma faixa dura. */
+.home > .section::before,
+.home > .tech-section::before,
+.home > .final-cta::before,
+.about-section::before,
+.about-tech::before,
+.about-benefits::before,
+.technology-section::before,
+.technology-flow-section::before,
+.technology-architecture::before,
+.technology-future::before,
+.contact-section::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--line), color-mix(in srgb, var(--accent) 18%, var(--line)), var(--line), transparent);
+  opacity: 0.62;
+}
+
+.home > .section > *,
+.home > .tech-section > *,
+.home > .final-cta > *,
+.about-section > *,
+.about-tech > *,
+.about-benefits > *,
+.technology-section > *,
+.technology-flow-section > *,
+.technology-architecture > *,
+.technology-future > *,
+.contact-section > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tipografia mantém o mesmo contraste em todas as seções. */
+.about-title h2,
+.about-flow-card h3,
+.about-benefit h3,
+.about-tech-text h2,
+.technology-title h2,
+.tech-card h3,
+.technology-flow-text h2,
+.flow-step h3,
+.architecture-left h2,
+.architecture-item h3,
+.future-card h3,
+.contact-title h2,
+.contact-info h3 {
+  color: var(--text-strong);
+}
+
+.about-title p,
+.about-flow-card p,
+.about-benefit p,
+.about-tech-text p,
+.technology-title p,
+.tech-card p,
+.technology-flow-text p,
+.flow-step p,
+.architecture-left p,
+.architecture-item p,
+.future-card p,
+.contact-title p,
+.contact-info > p {
+  color: var(--muted);
+}
+
+.hero h1 strong,
+.about-hero h1 strong,
+.technology-hero h1 strong,
+.contact-hero h1 strong {
+  color: transparent;
+  background: linear-gradient(112deg, var(--accent-strong), color-mix(in srgb, var(--accent) 72%, var(--violet)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  text-shadow: none;
+}
+
+/* A mesma arquitetura de superfície para todos os cards institucionais. */
+.about-flow-card,
+.about-benefit,
+.tech-card,
+.future-card,
+.flow-step,
+.architecture-item,
+.contact-form,
+.contact-info {
+  color: var(--text);
+  border-color: var(--line);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-2) 88%, transparent), var(--surface-1));
+  box-shadow: var(--shadow), var(--inset-hi);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition:
+    transform var(--dur) var(--ease-fluid),
+    border-color var(--dur) var(--ease-fluid),
+    background var(--dur) var(--ease-fluid),
+    box-shadow var(--dur) var(--ease-fluid);
+}
+
+.about-flow-card:hover,
+.about-benefit:hover,
+.tech-card:hover,
+.future-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-line);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--surface-3) 82%, transparent), var(--surface-1));
+  box-shadow: var(--shadow-soft), var(--inset-hi);
+}
+
+.about-flow-card svg,
+.about-benefit svg,
+.tech-card svg,
+.future-card svg {
+  color: var(--accent);
+}
+
+.about-flow-card::after,
+.tech-card::after {
+  opacity: 0.36;
+}
+
+.about-tech-list div,
+.architecture-item,
+.flow-step,
+.contact-info-row,
+.contact-input,
+.contact-form textarea {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+  box-shadow: var(--inset-hi);
+}
+
+.about-tech-list span {
+  color: var(--text);
+}
+
+.about-drone-card,
+.technology-core {
+  border-color: var(--line-2);
+  background:
+    linear-gradient(rgba(34, 211, 238, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.035) 1px, transparent 1px),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-2) 86%, transparent), var(--surface-1));
+  background-size: 40px 40px, 40px 40px, auto;
+  box-shadow: var(--shadow-soft), var(--inset-hi);
+}
+
+.core-center,
+.core-node {
+  box-shadow: 0 14px 36px color-mix(in srgb, var(--accent) 12%, transparent), var(--inset-hi);
+}
+
+.flow-line {
+  opacity: 0.58;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.final-cta-bg {
+  opacity: 0.55;
+}
+
+/* Troca de rota: dissolução curta e neutra, sem flash ou salto espacial. */
+@media (prefers-reduced-motion: no-preference) {
+  .home,
+  .about-page,
+  .technology-page,
+  .contact-page {
+    animation: marketingPageEnter 440ms var(--ease-fluid) both;
+  }
+}
+
+@keyframes marketingPageEnter {
+  from { opacity: 0.88; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .home > .section::before,
+  .home > .tech-section::before,
+  .home > .final-cta::before,
+  .about-section::before,
+  .about-tech::before,
+  .about-benefits::before,
+  .technology-section::before,
+  .technology-flow-section::before,
+  .technology-architecture::before,
+  .technology-future::before,
+  .contact-section::before {
+    left: 18px;
+    right: 18px;
+  }
+}

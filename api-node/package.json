@@ -1,0 +1,26 @@
+{
+  "name": "projeto-drone",
+  "version": "1.0.0",
+  "description": "API do Gestock Drone - inventario por QR Code (PostgreSQL/Supabase)",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "db:test": "node scripts/testar-conexao.js",
+    "db:setup": "node scripts/setup-banco.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

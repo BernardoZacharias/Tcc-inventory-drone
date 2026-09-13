@@ -1,0 +1,114 @@
+/* Public-page refinements: readable forms, honest delivery feedback and a clear next step. */
+.contact-form .public-form-note {
+  margin: 0 0 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  background: var(--surface-1);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.contact-form > label,
+.login-card .public-login-field > label {
+  display: block;
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.contact-form > label + .public-field { margin-top: -6px; }
+.public-optional { color: var(--muted); font-weight: 400; }
+.public-field { min-width: 0; display: grid; gap: 7px; }
+.public-field textarea { width: 100%; }
+.public-field-hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.public-field-error { display: block; color: var(--danger, #f87171); font-size: 12px; line-height: 1.55; }
+
+.contact-form .contact-input:has([aria-invalid="true"]),
+.contact-form textarea[aria-invalid="true"],
+.login-card .input-box:has([aria-invalid="true"]) { border-color: var(--danger, #f87171); }
+
+.public-form-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.public-form-feedback svg { flex-shrink: 0; margin-top: 2px; }
+.public-form-feedback.is-error { background: color-mix(in srgb, var(--danger, #f87171) 8%, transparent); color: var(--text); border-color: color-mix(in srgb, var(--danger, #f87171) 35%, var(--line)); }
+.public-form-feedback.is-error svg { color: var(--danger, #f87171); }
+
+.contact-form .public-message-ready {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+  border-radius: 14px;
+  overflow-wrap: anywhere;
+}
+.public-message-ready > div { display: flex; align-items: center; gap: 9px; font-size: 14px; }
+.public-message-ready svg { flex-shrink: 0; color: var(--cyan); }
+.public-message-ready p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.public-contact-link { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 10px 14px; color: var(--text); border: 1px solid var(--accent-line); border-radius: 10px; background: var(--surface-2); font-size: 13px; font-weight: 650; text-decoration: none; }
+.public-contact-link:hover { background: var(--surface-3); border-color: var(--accent); }
+
+.contact-info-list a.contact-info-row { text-decoration: none; }
+.contact-info-row > div { min-width: 0; }
+.contact-info-row strong { overflow-wrap: anywhere; }
+.contact-info-list div.contact-info-row:hover { transform: none; border-color: var(--line); background: var(--surface-2); }
+.contact-page .contact-submit { min-height: 48px; color: #032a30; }
+
+.login-page { min-height: 100dvh; padding-block: 104px 48px; }
+.login-card .public-login-field { margin-bottom: 20px; }
+.login-card .input-box { gap: 10px; padding: 7px 12px; min-height: 52px; }
+.login-card .input-box input { min-width: 0; width: 100%; color: var(--text); min-height: 36px; }
+.login-card .input-box button { width: 40px; height: 40px; flex-shrink: 0; border-radius: 8px; }
+.login-card .public-field-error { margin-top: 6px; }
+.login-card .login-button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; color: #032a30; }
+.login-card p.login-hint { margin: 20px 0 8px; font-size: 12px; line-height: 1.6; }
+.public-login-help { display: block; margin: 0 auto; background: none; border: 0; min-height: 40px; padding: 8px; color: var(--cyan); font-size: 12px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+.public-login-help:hover { color: var(--text); }
+.public-spinner { animation: public-spin 1s linear infinite; }
+@keyframes public-spin { to { transform: rotate(360deg); } }
+
+.public-next-step {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  width: min(1200px, calc(100% - 80px));
+  margin: 32px auto 80px;
+  padding: clamp(24px, 4vw, 48px);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: linear-gradient(130deg, var(--surface-2), var(--surface-1));
+}
+.public-next-step h2 { max-width: 680px; font-size: clamp(24px, 2.8vw, 34px); letter-spacing: -0.025em; line-height: 1.22; color: var(--text-strong); }
+.public-next-step p { max-width: 660px; margin: 14px 0 0; font-size: 15px; line-height: 1.7; color: var(--muted); }
+.public-next-step > button { flex-shrink: 0; }
+
+@media (max-width: 700px) {
+  .contact-page .contact-form, .contact-page .contact-info { padding: 22px 18px; }
+  .contact-page .contact-input input, .contact-page textarea, .login-card .input-box input { font-size: 16px; }
+  .public-next-step { width: calc(100% - 40px); margin-block: 24px 48px; flex-direction: column; align-items: stretch; gap: 24px; }
+  .public-next-step > button { width: 100%; justify-content: center; }
+  .login-page .login-card { width: min(460px, 100%); padding: 30px 24px; }
+  .login-page .login-brand { top: 22px; right: 18px; }
+  .login-page .login-brand img { height: 34px; max-width: 120px; object-fit: contain; }
+  .login-page .login-back { left: 16px; top: 18px; min-height: 42px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-spinner { animation: none; }
+}

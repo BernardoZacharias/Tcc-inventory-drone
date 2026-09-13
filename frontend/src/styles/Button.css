@@ -1,0 +1,15 @@
+/* Estrutura base do botao.
+   A aparencia premium (pilula, icone aninhado, curvas de mola)
+   vive em polish.css, que carrega por ultimo. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+  white-space: nowrap;
+}
+
+.button-label { display: inline-block; }

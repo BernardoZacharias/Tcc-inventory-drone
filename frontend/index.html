@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR" translate="no">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="google" content="notranslate" />
+
+    <title>Gestock Drone — Inventário com QR Code</title>
+    <meta
+      name="description"
+      content="Sistema de inventário logístico com leitura de QR Code por drone, visão computacional e painel de gestão por empresa."
+    />
+    <meta name="theme-color" content="#070b12" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f4f7fb" media="(prefers-color-scheme: light)" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Gestock Drone — Inventário com QR Code" />
+    <meta
+      property="og:description"
+      content="Leitura automatizada de estoque com drone e visão computacional."
+    />
+
+    <!-- Tema aplicado ANTES da primeira pintura, para nao piscar branco -->
+    <script>
+      (function () {
+        try {
+          var salvo = localStorage.getItem("gestock-theme");
+          if (salvo === "light" || salvo === "dark") {
+            document.documentElement.setAttribute("data-theme", salvo);
+          }
+        } catch (e) {
+          /* localStorage bloqueado: segue a preferencia do sistema */
+        }
+      })();
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

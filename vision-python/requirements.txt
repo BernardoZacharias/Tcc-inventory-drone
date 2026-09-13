@@ -1,0 +1,15 @@
+# Gestock Drone - modulo de visao computacional
+#
+# Instalacao:
+#     pip install -r requirements.txt
+#
+# ATENCAO: o pyzbar depende da biblioteca nativa ZBar.
+#   - Windows: ja vem junto no pacote (nao precisa instalar nada)
+#   - Linux:   sudo apt install libzbar0
+#   - macOS:   brew install zbar
+
+opencv-python==4.13.0.92
+numpy==2.4.3
+mss==10.1.0
+requests==2.32.5
+pyzbar==0.1.9

@@ -1,0 +1,34 @@
+.overview-sync { display: flex; align-items: center; gap: 14px; padding: 16px 18px; margin-bottom: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-1); color: var(--muted); }
+.overview-sync > svg { flex-shrink: 0; color: var(--green); }
+.overview-sync > div { flex: 1; min-width: 0; }
+.overview-sync strong { display: block; color: var(--text); font-size: 0.875rem; margin-bottom: 4px; }
+.overview-sync p { font-size: 0.75rem; line-height: 1.65; }
+.overview-sync.has-error { border-color: var(--amber); background: var(--amber-soft); }
+.overview-sync.has-error > svg { color: var(--amber); }
+.dashboard-overview .header-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dashboard-overview .refresh-btn { min-height: 40px; }
+.dashboard-overview .bar-chart { height: 200px; gap: clamp(8px, 2vw, 24px); align-items: stretch; }
+.dashboard-overview .bar-col { min-width: 0; display: flex; flex: 1; flex-direction: column; justify-content: flex-end; height: 100%; }
+.overview-bar-track { height: 140px; flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.dashboard-overview .overview-bar-track .bar { width: 100%; min-height: 0; max-width: 64px; margin-inline: auto; }
+.dashboard-overview .bar-value, .dashboard-overview .bar-label { flex-shrink: 0; }
+.dashboard-overview .metrics-grid > div { min-width: 0; }
+.dashboard-overview .metric-card { height: 100%; }
+.dashboard-overview .rs-head strong { overflow-wrap: anywhere; }
+.cockpit-bar { position: relative; z-index: 20; }
+.cockpit-company-picker { position: relative; min-width: 0; }
+.cockpit .cockpit-company-menu { background: var(--bg-1); border-color: var(--line-2); box-shadow: var(--shadow-lg); max-height: min(300px, 45dvh); overflow-y: auto; overscroll-behavior: contain; }
+.cockpit .cockpit-company-option { color: var(--text); min-height: 44px; white-space: normal; text-align: left; }
+.cockpit .cockpit-company-option.is-active { background: var(--surface-3); }
+.cockpit .cockpit-company-option[aria-selected="true"] { color: var(--accent-strong); background: var(--accent-soft); }
+.cockpit-feedback { margin: 18px clamp(16px, 4vw, 40px) 0; }
+.cockpit-feedback button { margin-left: 12px; text-decoration: underline; }
+.cockpit .cockpit-status.is-unknown { color: var(--amber); }
+@media (max-width: 600px) {
+  .overview-sync { flex-wrap: wrap; align-items: flex-start; padding: 14px; }
+  .overview-sync > .link-btn { margin-left: 30px; }
+  .dashboard-overview .panel-header { flex-wrap: wrap; }
+  .dashboard-overview .panel-header-actions { flex-wrap: wrap; }
+  .dashboard-overview .add-company { flex-wrap: wrap; width: 100%; }
+  .dashboard-overview .add-company input { flex: 1; min-width: 140px; }
+}
