@@ -1,0 +1,11 @@
+# Gestock Drone Agent — marco 1 (conexão e vídeo)
+#
+#   pip install -r requirements.txt
+#
+# opencv-python já traz FFmpeg embutido, que é quem fala RTSP.
+opencv-python>=4.9
+numpy>=1.26
+
+# Opcional: só para a fonte sintética desenhar um QR de verdade
+# (usada em teste, dispensável para operar o drone).
+qrcode>=7.4
