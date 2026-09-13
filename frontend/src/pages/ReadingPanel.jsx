@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, PauseCircle, PlayCircle, RadioTower,
@@ -8,16 +8,19 @@ import {
 import {
   iniciarLeitura, pararLeitura, statusLeitura,
   leiturasPorEmpresa, criarLeitura,
-  listarEmpresas, listarOperadores, listarSetores,
-  backendStatus
+  listarEmpresas, listarOperadores, listarSetores
 } from "../services/api";
 import { parseQrCode, QR_EXEMPLO } from "../utils/qrParser";
 import { beepLeituraNova } from "../utils/beep";
 import { toast } from "../services/toast";
 import { isAdmin, currentEmpresaId, getCurrentUser } from "../utils/auth";
 import ScannerEffect from "../components/ScannerEffect";
+import { useOperationalData } from "../hooks/useOperationalData";
+import { OperationsFeedback } from "../components/OperationsFeedback";
 import "../styles/ReadingPanel.css";
 import "../styles/Pages.css";
+import "../styles/DashboardUX.css";
+const FETCHERS = [listarEmpresas, listarOperadores, listarSetores];
 
 /* Tempo relativo curto — "agora", "há 12s", "há 4min" */
 function tempoRelativo(iso) {
@@ -36,6 +39,9 @@ function CompanyCombobox({ companies, value, onChange, disabled }) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const rootRef = useRef(null);
+  const buttonRef = useRef(null);
+  const optionsId = useId();
+  const typeahead = useRef({ text: "", time: 0 });
   const options = useMemo(
     () => [{ id: "", nome: "Selecione a empresa..." }, ...companies],
     [companies]
@@ -45,6 +51,9 @@ function CompanyCombobox({ companies, value, onChange, disabled }) {
     options.findIndex((company) => String(company.id) === String(value))
   );
   const selected = options[selectedIndex];
+  useEffect(() => {
+    if (open) document.getElementById(`${optionsId}-${activeIndex}`)?.scrollIntoView({ block: "nearest" });
+  }, [open, activeIndex, optionsId]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -64,16 +73,28 @@ function CompanyCombobox({ companies, value, onChange, disabled }) {
   }
 
   function choose(index) {
+    if (!options[index]) return;
     onChange(String(options[index].id));
     setActiveIndex(index);
     setOpen(false);
+    buttonRef.current?.focus({ preventScroll: true });
   }
 
   function handleKeyDown(event) {
     if (disabled) return;
 
     if (event.key === "Escape") {
+      event.preventDefault();
       setOpen(false);
+      return;
+    }
+    if (event.key === "Tab") { setOpen(false); return; }
+    if (event.key.length === 1 && event.key !== " " && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      const now = Date.now();
+      typeahead.current.text = (now - typeahead.current.time < 700 ? typeahead.current.text : "") + event.key.toLocaleLowerCase("pt-BR");
+      typeahead.current.time = now;
+      const index = options.findIndex((option) => option.nome.toLocaleLowerCase("pt-BR").startsWith(typeahead.current.text));
+      if (index >= 0) { event.preventDefault(); if (!open) setOpen(true); setActiveIndex(index); }
       return;
     }
 
@@ -110,15 +131,17 @@ function CompanyCombobox({ companies, value, onChange, disabled }) {
   }
 
   return (
-    <div className="cockpit-company-picker" ref={rootRef}>
+    <div className="cockpit-company-picker" ref={rootRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
       <button
+        ref={buttonRef}
         type="button"
         className="cockpit-empresa"
         role="combobox"
         aria-label="Empresa da leitura"
         aria-expanded={open}
-        aria-controls="cockpit-company-options"
-        aria-activedescendant={open ? `cockpit-company-option-${activeIndex}` : undefined}
+        aria-controls={open ? optionsId : undefined}
+        aria-haspopup="listbox"
+        aria-activedescendant={open ? `${optionsId}-${activeIndex}` : undefined}
         disabled={disabled}
         onClick={() => (open ? setOpen(false) : openMenu())}
         onKeyDown={handleKeyDown}
@@ -132,7 +155,7 @@ function CompanyCombobox({ companies, value, onChange, disabled }) {
       <AnimatePresence>
         {open && (
           <motion.div
-            id="cockpit-company-options"
+            id={optionsId}
             className="cockpit-company-menu"
             role="listbox"
             aria-label="Empresas disponíveis"
@@ -147,9 +170,11 @@ function CompanyCombobox({ companies, value, onChange, disabled }) {
 
               return (
                 <button
-                  id={`cockpit-company-option-${index}`}
+                  id={`${optionsId}-${index}`}
                   key={company.id || "empty"}
                   type="button"
+                  tabIndex={-1}
+                  onMouseDown={(event) => event.preventDefault()}
                   className={`cockpit-company-option${isActive ? " is-active" : ""}`}
                   role="option"
                   aria-selected={isSelected}
@@ -172,18 +197,19 @@ export default function ReadingPanel({ setPage, company }) {
   const admin = isAdmin();
   const user = getCurrentUser();
 
-  const [empresas, setEmpresas] = useState([]);
-  const [operadores, setOperadores] = useState([]);
-  const [setores, setSetores] = useState([]);
+  const { data: [empresas, operadores, setores], loading: metadataLoading, error: metadataError, updatedAt, refresh: refreshMetadata } = useOperationalData(FETCHERS);
 
   const [empresaId, setEmpresaId] = useState(company?.id || currentEmpresaId() || "");
   const [operadorId, setOperadorId] = useState("");
   const [setorId, setSetorId] = useState("");
 
-  const [status, setStatus] = useState("Aguardando início");
-  const [active, setActive] = useState(false);
+  const [status, setStatus] = useState("Verificando leitor…");
+  const [active, setActive] = useState(null);
+  const [readerBusy, setReaderBusy] = useState(false);
+  const commandRef = useRef(false);
+  const [readingsError, setReadingsError] = useState("");
   const [readings, setReadings] = useState([]);
-  const [soundOn, setSoundOn] = useState(true);
+  const [soundOn, setSoundOn] = useState(false);
   const [qrText, setQrText] = useState("");
   const [saving, setSaving] = useState(false);
   // Qual empresa ja teve as leituras carregadas. Derivar o "carregando"
@@ -192,34 +218,34 @@ export default function ReadingPanel({ setPage, company }) {
 
   // Painel de registro manual — fechado por padrao para nao roubar a dobra
   const [manualAberto, setManualAberto] = useState(false);
+  const manualRef = useRef(null);
+  const manualTriggerRef = useRef(null);
+  useEffect(() => {
+    if (!manualAberto) return;
+    const dialog = manualRef.current;
+    const trigger = manualTriggerRef.current;
+    const overflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog.close();
+      document.body.style.overflow = overflow;
+      if (trigger?.isConnected) trigger.focus({ preventScroll: true });
+    };
+  }, [manualAberto]);
   // Ids que acabaram de chegar (ganham destaque temporario)
   const [novos, setNovos] = useState(() => new Set());
   // Forca o recalculo dos tempos relativos
   const [, setTick] = useState(0);
 
   const lastIdRef = useRef(0);
-  const soundRef = useRef(true);
+  const soundRef = useRef(false);
   useEffect(() => { soundRef.current = soundOn; }, [soundOn]);
 
   // Relogio dos "há 12s"
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 5000);
     return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      const [e, o, s] = await Promise.all([
-        listarEmpresas(), listarOperadores(), listarSetores()
-      ]);
-      if (e?.success) {
-        setEmpresas(e.data || []);
-        // funcional: nao depende do valor atual, entao o effect roda so uma vez
-        if (e.data?.length) setEmpresaId((atual) => atual || e.data[0].id);
-      }
-      if (o?.success) setOperadores(o.data || []);
-      if (s?.success) setSetores(s.data || []);
-    })();
   }, []);
 
   const marcarNovos = useCallback((ids) => {
@@ -238,9 +264,10 @@ export default function ReadingPanel({ setPage, company }) {
     }, DESTAQUE_MS);
   }, []);
 
-  const loadReadings = useCallback(async (inicial = false) => {
+  const loadReadings = useCallback(async (inicial = false, current = () => true) => {
     if (!empresaId) return;
     const data = await leiturasPorEmpresa(empresaId);
+    if (!current()) return;
     if (data?.success) {
       const items = data.data || [];
       const newestId = items[0]?.id || 0;
@@ -254,60 +281,91 @@ export default function ReadingPanel({ setPage, company }) {
       }
       lastIdRef.current = newestId;
       setReadings(items);
+      setReadingsError("");
+    } else {
+      setReadingsError(data?.message || "Não foi possível atualizar as leituras desta empresa.");
     }
     setCarregadoPara(empresaId);
   }, [empresaId, marcarNovos]);
 
-  async function syncStatus() {
+  async function syncStatus(current = () => true) {
+    if (commandRef.current) return;
     const r = await statusLeitura();
-    if (r?.sucesso) setActive(!!r.ativa);
+    if (!current() || commandRef.current) return;
+    if (r?.sucesso) {
+      setActive(Boolean(r.ativa));
+      setStatus(r.ativa ? "Scanner ativo — janela aberta no PC" : "Leitor pronto para iniciar");
+    } else {
+      setActive(null);
+      setStatus("Estado do leitor indisponível");
+    }
   }
 
   useEffect(() => {
     lastIdRef.current = 0;
     let primeiro = true;
+    let cancelled = false;
+    let inFlight = false;
+    const current = () => !cancelled;
 
     // Tudo acontece depois de um await: nada de setState sincrono aqui.
     const tick = async () => {
-      await loadReadings(primeiro);
+      if (cancelled || inFlight || document.hidden) return;
+      inFlight = true;
+      await loadReadings(primeiro, current);
       primeiro = false;
-      await syncStatus();
+      await syncStatus(current);
+      inFlight = false;
     };
 
     tick();
     const id = setInterval(tick, 2500);
-    return () => clearInterval(id);
+    return () => { cancelled = true; clearInterval(id); };
   }, [empresaId, loadReadings]);
 
   async function startReading() {
+    if (commandRef.current) return;
     if (!empresaId) { toast.error("Selecione uma empresa"); return; }
     setStatus("Iniciando leitura...");
+    commandRef.current = true;
+    setReaderBusy(true);
     const data = await iniciarLeitura(empresaId);
-    const online = backendStatus() === true;
+    commandRef.current = false;
+    setReaderBusy(false);
 
-    if (online && data.sucesso) {
+    if (data.sucesso) {
       setStatus("Scanner ativo — janela aberta no PC");
       setActive(true);
       toast.success("Scanner do drone iniciado");
     } else {
-      setActive(false);
-      setStatus("Backend offline — use o registro manual");
-      toast.error("A leitura por tela precisa do backend (api-node) em execução.");
-      setManualAberto(true);
+      setActive(null);
+      setStatus("Não foi possível iniciar o leitor");
+      toast.error(data.mensagem || "Verifique a conexão com o leitor e tente novamente.");
     }
   }
 
   async function stopReading() {
-    const online = backendStatus() === true;
-    await pararLeitura();
-    setStatus(online ? "Scanner encerrado" : "Aguardando início");
-    setActive(false);
-    toast.info("Scanner encerrado");
+    if (commandRef.current) return;
+    commandRef.current = true;
+    setReaderBusy(true);
+    const result = await pararLeitura();
+    commandRef.current = false;
+    setReaderBusy(false);
+    if (result?.sucesso) {
+      setStatus("Scanner encerrado");
+      setActive(false);
+      toast.info("Scanner encerrado");
+    } else {
+      setActive(null);
+      setStatus("Parada não confirmada — verifique o leitor");
+      toast.error(result?.mensagem || "Não foi possível confirmar a parada do scanner.");
+    }
   }
 
   const preview = useMemo(() => parseQrCode(qrText), [qrText]);
 
   async function registrarLeitura() {
+    if (saving) return;
     if (!empresaId) { toast.error("Selecione uma empresa"); return; }
     if (!qrText.trim()) { toast.error("Cole o conteúdo do QR Code"); return; }
 
@@ -337,8 +395,9 @@ export default function ReadingPanel({ setPage, company }) {
   /* ── Métricas da sessão ── */
   const carregando = Boolean(empresaId) && carregadoPara !== empresaId;
   // Sem empresa escolhida nao ha o que listar (nem sobra do anterior)
-  const lista = useMemo(() => (empresaId ? readings : []), [empresaId, readings]);
+  const lista = useMemo(() => (empresaId && carregadoPara === empresaId ? readings : []), [empresaId, readings, carregadoPara]);
   const destaque = lista[0] || null;
+  const metric = (value) => empresaId && !carregando && (!readingsError || lista.length) ? value : "—";
   const stats = useMemo(() => {
     const itens = lista.reduce((s, r) => s + (Number(r.quantidade) || 0), 0);
     const frageis = lista.filter((r) => r.fragil === "Sim").length;
@@ -347,7 +406,7 @@ export default function ReadingPanel({ setPage, company }) {
   }, [lista]);
 
   return (
-    <main className="cockpit" id="conteudo">
+    <main className="cockpit">
       {/* ── Barra de comando ── */}
       <header className="cockpit-bar">
         <button className="cockpit-back" onClick={() => setPage("readings")}>
@@ -360,12 +419,12 @@ export default function ReadingPanel({ setPage, company }) {
           <CompanyCombobox
             companies={empresas}
             value={empresaId}
-            onChange={setEmpresaId}
-            disabled={!admin}
+            onChange={(value) => { setEmpresaId(value); setOperadorId(""); setSetorId(""); setReadings([]); setReadingsError(""); }}
+            disabled={!admin || active !== false || readerBusy || metadataLoading}
           />
         </div>
 
-        <div className={`cockpit-status${active ? " live" : ""}`}>
+        <div className={`cockpit-status${active ? " live" : ""}${active === null ? " is-unknown" : ""}`} role="status">
           <RadioTower size={15} strokeWidth={1.75} />
           <span>{status}</span>
           {active && <i className="live-pulse" />}
@@ -382,20 +441,22 @@ export default function ReadingPanel({ setPage, company }) {
           </button>
 
           {active ? (
-            <button className="cd-btn stop" onClick={stopReading}>
+            <button className="cd-btn stop" disabled={readerBusy} onClick={stopReading}>
               <PauseCircle size={16} strokeWidth={1.75} /> Parar
             </button>
           ) : (
-            <button className="cd-btn go" onClick={startReading}>
+            <button className="cd-btn go" disabled={readerBusy || !empresaId || active === null} onClick={startReading}>
               <PlayCircle size={16} strokeWidth={1.75} /> Iniciar leitura
             </button>
           )}
 
-          <button className="cd-btn" onClick={() => setManualAberto(true)}>
+          <button className="cd-btn" ref={manualTriggerRef} disabled={!empresaId || metadataLoading} onClick={() => setManualAberto(true)}>
             <Plus size={16} strokeWidth={1.75} /> Manual
           </button>
         </div>
       </header>
+      <OperationsFeedback loading={metadataLoading} error={metadataError || readingsError} updatedAt={updatedAt} onRetry={() => { refreshMetadata(); loadReadings(true); syncStatus(); }} />
+      {active === null && <p className="cockpit-feedback" role="status">Não há confirmação do estado do leitor. Confira o equipamento antes de iniciar outra captura. <button onClick={() => syncStatus()}>Verificar conexão</button><button onClick={stopReading} disabled={readerBusy}>Tentar parar leitor</button></p>}
 
       {/* ── Cockpit: visor + captura em destaque | feed ao vivo ── */}
       <div className="cockpit-grid">
@@ -445,10 +506,9 @@ export default function ReadingPanel({ setPage, company }) {
                 <div className="latest-empty">
                   <ScanLine size={22} strokeWidth={1.25} />
                   <div>
-                    <strong>Nenhuma captura ainda</strong>
+                    <strong>{carregando ? "Carregando capturas…" : readingsError ? "Capturas indisponíveis" : !empresaId ? "Selecione uma empresa" : "Nenhuma captura ainda"}</strong>
                     <p>
-                      Inicie o scanner do drone ou registre uma leitura manual —
-                      ela aparece aqui na hora.
+                      {carregando || readingsError ? "Aguarde a conexão ou tente atualizar as leituras." : "Escolha a empresa, inicie o scanner ou registre uma leitura manual."}
                     </p>
                   </div>
                 </div>
@@ -461,16 +521,16 @@ export default function ReadingPanel({ setPage, company }) {
           <div className="feed-head">
             <h2><QrCode size={15} strokeWidth={1.75} /> Feed ao vivo</h2>
             <span className={`feed-live${active ? " on" : ""}`}>
-              <i /> {active ? "ao vivo" : "parado"}
+              <i /> {active === null ? "sem confirmação" : active ? "ao vivo" : "parado"}
             </span>
           </div>
 
           <div className="feed-stats">
-            <div><strong>{lista.length}</strong><span>leituras</span></div>
-            <div><strong>{stats.itens}</strong><span>itens</span></div>
-            <div><strong>{stats.locais}</strong><span>locais</span></div>
+            <div><strong>{metric(lista.length)}</strong><span>leituras</span></div>
+            <div><strong>{metric(stats.itens)}</strong><span>itens</span></div>
+            <div><strong>{metric(stats.locais)}</strong><span>locais</span></div>
             <div className={stats.frageis ? "warn" : ""}>
-              <strong>{stats.frageis}</strong><span>frágeis</span>
+              <strong>{metric(stats.frageis)}</strong><span>frágeis</span>
             </div>
           </div>
 
@@ -483,9 +543,9 @@ export default function ReadingPanel({ setPage, company }) {
                 </li>
               ))}
 
-            {!carregando && lista.length === 0 && (
+            {!carregando && !readingsError && lista.length === 0 && (
               <li className="feed-empty">
-                Nenhuma leitura para esta empresa ainda.
+                {empresaId ? "Nenhuma leitura para esta empresa ainda." : "Selecione a empresa para visualizar as leituras."}
               </li>
             )}
 
@@ -521,33 +581,20 @@ export default function ReadingPanel({ setPage, company }) {
       </div>
 
       {/* ── Registro manual: gaveta lateral, não bloco fixo na página ── */}
-      <AnimatePresence>
-        {manualAberto && (
-          <>
-            <motion.div
-              className="drawer-scrim"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setManualAberto(false)}
-            />
-            <motion.aside
+      {manualAberto && (
+          <dialog ref={manualRef} className="manual-dialog" aria-label="Registrar leitura manual" onCancel={(event) => { event.preventDefault(); if (!saving) setManualAberto(false); }}>
+            <aside
               className="drawer"
-              role="dialog"
-              aria-label="Registrar leitura manual"
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
             >
               <header className="drawer-head">
                 <h2><ScanLine size={17} strokeWidth={1.75} /> Registrar leitura</h2>
-                <button onClick={() => setManualAberto(false)} aria-label="Fechar">
+                <button disabled={saving} onClick={() => setManualAberto(false)} aria-label="Fechar">
                   <X size={18} strokeWidth={1.75} />
                 </button>
               </header>
 
               <div className="drawer-body">
+                <p className="muted">Empresa: <strong>{empresas.find((item) => String(item.id) === String(empresaId))?.nome || company?.name || "Empresa selecionada"}</strong></p>
                 <label className="field-label" htmlFor="qr">Conteúdo do QR Code</label>
                 <textarea
                   id="qr"
@@ -556,26 +603,27 @@ export default function ReadingPanel({ setPage, company }) {
                   onChange={(e) => setQrText(e.target.value)}
                   placeholder={QR_EXEMPLO}
                   rows={4}
+                  disabled={saving}
                 />
-                <button type="button" className="link-btn" onClick={() => setQrText(QR_EXEMPLO)}>
+                <button type="button" disabled={saving} className="link-btn" onClick={() => setQrText(QR_EXEMPLO)}>
                   Usar QR de exemplo
                 </button>
 
                 <div className="drawer-row">
                   <div>
                     <label className="field-label" htmlFor="op">Operador</label>
-                    <select id="op" className="reading-select" value={operadorId}
+                    <select id="op" disabled={saving} className="reading-select" value={operadorId}
                       onChange={(e) => setOperadorId(e.target.value)}>
-                      <option value="">— Não identificado —</option>
-                      {operadores.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
+                      <option value="">{user?.nome ? `${user.nome} (usuário atual)` : "— Não identificado —"}</option>
+                      {operadores.filter((o) => String(o.empresa_id) === String(empresaId)).map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="field-label" htmlFor="st">Setor</label>
-                    <select id="st" className="reading-select" value={setorId}
+                    <select id="st" disabled={saving} className="reading-select" value={setorId}
                       onChange={(e) => setSetorId(e.target.value)}>
                       <option value="">— Sem setor —</option>
-                      {setores.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                      {setores.filter((s) => String(s.empresa_id) === String(empresaId)).map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
                     </select>
                   </div>
                 </div>
@@ -607,15 +655,14 @@ export default function ReadingPanel({ setPage, company }) {
               </div>
 
               <footer className="drawer-foot">
-                <button className="cd-btn" onClick={() => setManualAberto(false)}>Cancelar</button>
-                <button className="cd-btn go wide" onClick={registrarLeitura} disabled={saving}>
+                <button className="cd-btn" disabled={saving} onClick={() => setManualAberto(false)}>Cancelar</button>
+                <button className="cd-btn go wide" onClick={registrarLeitura} disabled={saving || !qrText.trim()}>
                   {saving ? "Registrando..." : "Registrar leitura"}
                 </button>
               </footer>
-            </motion.aside>
-          </>
+            </aside>
+          </dialog>
         )}
-      </AnimatePresence>
     </main>
   );
 }

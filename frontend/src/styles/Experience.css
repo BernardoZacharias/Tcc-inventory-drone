@@ -1,5 +1,7 @@
 /* Shared interaction layer. Keep page-specific layouts in their own stylesheets. */
 .app-view { min-width: 0; }
+:root { --danger: var(--red); }
+.contact-page .contact-submit, .login-page .login-card .login-button { color: var(--accent-ink); }
 .app-view:focus, .app-view h1[tabindex="-1"]:focus, .app-view h2[tabindex="-1"]:focus { outline: none; }
 .skip-link { position: fixed; }
 body.gestock-is-loading .skip-link { display: none; }
@@ -46,6 +48,17 @@ select option:disabled { color: var(--muted); }
 .dashboard :is(input, select, textarea)[aria-invalid="true"] { border-color: var(--red); }
 .dashboard :is(.form-field, .form-group, .add-company) { min-width: 0; }
 .company-card { color: var(--text); }
+.company-page .company-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.company-page .company-hero { flex-wrap: wrap; }
+.company-page .company-hero h1 { overflow-wrap: anywhere; }
+.company-page .reading-card > div { min-width: 0; overflow-wrap: anywhere; }
+.company-page .reading-icon { flex-shrink: 0; }
+.public-field-error { color: var(--red); }
+.operations-page select { color-scheme: inherit; }
+[data-theme="light"] :is(.navbar-logo img, .sidebar-logo-img, .workspace-mobilebar img, .login-brand img, .gestock-loader__brand img) { filter: brightness(.32) saturate(.7); }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) :is(.navbar-logo img, .sidebar-logo-img, .workspace-mobilebar img, .login-brand img, .gestock-loader__brand img) { filter: brightness(.32) saturate(.7); }
+}
 .company-card:hover, .metric-card:hover { transform: translateY(-2px); }
 .metric-card { border-radius: 20px; }
 .metric-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -91,6 +104,9 @@ select option:disabled { color: var(--muted); }
   .cursor-drone { display: none; }
 }
 @media (max-width: 540px) {
+  .operations-page .row-2 { grid-template-columns: 1fr; }
+  .company-page { padding: 24px 16px; }
+  .company-page .company-metrics { grid-template-columns: 1fr; }
   .dashboard-content { padding: 24px 16px 32px; }
   .workspace-mobilebar { padding-inline: 16px; }
   .dashboard :is(.metrics-grid, .substats-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

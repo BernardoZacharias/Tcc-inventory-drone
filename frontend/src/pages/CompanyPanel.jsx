@@ -1,29 +1,20 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Play, QrCode, BarChart3 } from "lucide-react";
 import { leiturasPorEmpresa } from "../services/api";
+import { useOperationalData } from "../hooks/useOperationalData";
+import { OperationsFeedback } from "../components/OperationsFeedback";
 import { cardPop, stagger } from "../animations/motionVariants";
 import "../styles/CompanyPanel.css";
 import "../styles/Dashboard.css";
 
 export default function CompanyPanel({ setPage, company }) {
-  const [readings, setReadings] = useState([]);
-
-  useEffect(() => {
-    if (!company?.id) return;
-    let active = true;
-    async function load() {
-      const r = await leiturasPorEmpresa(company.id);
-      if (active && r?.success) setReadings(r.data || []);
-    }
-    load();
-    const id = setInterval(load, 4000);
-    return () => { active = false; clearInterval(id); };
-  }, [company]);
+  const companyId = company?.id;
+  const fetchers = useMemo(() => [() => leiturasPorEmpresa(companyId)], [companyId]);
+  const { data: [readings], loading, error, updatedAt, refresh } = useOperationalData(fetchers, { interval: 4000, enabled: Boolean(companyId) });
 
   if (!company) {
-    setPage("dashboard");
-    return null;
+    return <main className="company-page"><h1>Selecione uma empresa</h1><button className="back-action" onClick={() => setPage("companies")}>Ver empresas</button></main>;
   }
 
   return (
@@ -50,11 +41,12 @@ export default function CompanyPanel({ setPage, company }) {
         </button>
       </motion.section>
 
-      <div className="metrics-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+      <OperationsFeedback loading={loading && !updatedAt} error={error} updatedAt={updatedAt} onRetry={refresh} />
+      <div className="metrics-grid company-metrics">
         <div className="metric-card accent-cyan">
           <div className="metric-content">
             <span className="metric-title">Leituras</span>
-            <strong className="metric-value">{readings.length}</strong>
+            <strong className="metric-value">{updatedAt ? readings.length : "—"}</strong>
           </div>
           <div className="metric-icon"><QrCode size={22} /></div>
         </div>
@@ -62,15 +54,15 @@ export default function CompanyPanel({ setPage, company }) {
           <div className="metric-content">
             <span className="metric-title">Última leitura</span>
             <strong className="metric-value" style={{ fontSize: 16 }}>
-              {readings[0] ? new Date(readings[0].criado_em).toLocaleString() : "—"}
+              {readings[0] ? new Date(readings[0].data_hora_leitura || readings[0].criado_em).toLocaleString("pt-BR") : "—"}
             </strong>
           </div>
           <div className="metric-icon"><BarChart3 size={22} /></div>
         </div>
         <div className="metric-card accent-violet">
           <div className="metric-content">
-            <span className="metric-title">Status</span>
-            <strong className="metric-value" style={{ fontSize: 18 }}>Operacional</strong>
+            <span className="metric-title">Sincronização</span>
+            <strong className="metric-value" style={{ fontSize: 18 }}>{error ? "Indisponível" : updatedAt ? "Atualizada" : "Conectando…"}</strong>
           </div>
           <div className="metric-icon"><Play size={22} /></div>
         </div>
@@ -82,7 +74,7 @@ export default function CompanyPanel({ setPage, company }) {
         </div>
 
         <motion.div className="readings-list" variants={stagger} initial="hidden" animate="visible">
-          {readings.length === 0 && <p className="empty-state">Nenhuma leitura registrada.</p>}
+          {!loading && !error && readings.length === 0 && <p className="empty-state">Nenhuma leitura registrada. Inicie uma nova leitura para esta empresa.</p>}
 
           {readings.map((reading) => (
             <motion.div className="reading-card" key={reading.id} variants={cardPop}>

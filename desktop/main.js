@@ -11,7 +11,7 @@
  * precisar saber que existe servidor ou Python por baixo.
  */
 
-const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, shell, dialog } = require("electron");
 const path = require("path");
 
 const api = require("./src/api-server");
@@ -24,6 +24,19 @@ const URL_DEV = process.env.GESTOCK_DEV_URL || "http://localhost:5173";
 let janela = null;
 let urlApi = null;
 
+/*
+ * Sem barra de menu.
+ *
+ * "File / Edit / View / Window / Help" é o menu padrão do Electron, não
+ * algo que este produto use: não há arquivo para abrir nem janela para
+ * gerenciar. Deixá-lo entrega cara de protótipo.
+ *
+ * Copiar, colar e selecionar continuam funcionando — são atalhos nativos
+ * do Chromium, não dependem do menu. Só o DevTools dependia, e por isso
+ * ele é religado por tecla logo abaixo.
+ */
+Menu.setApplicationMenu(null);
+
 function criarJanela() {
   janela = new BrowserWindow({
     width: 1440,
@@ -33,6 +46,7 @@ function criarJanela() {
     backgroundColor: "#050506",     // evita o flash branco antes do React montar
     show: false,
     title: "Gestock Drone",
+    autoHideMenuBar: true,   // reforço: nem com Alt a barra aparece
     icon: path.join(__dirname, "build",
       process.platform === "win32" ? "icon.ico" : "icon.png"),
     webPreferences: {
@@ -44,6 +58,16 @@ function criarJanela() {
   });
 
   janela.once("ready-to-show", () => janela.show());
+
+  // Sem menu, F12 e Ctrl+Shift+I passam a ser a única porta do DevTools.
+  janela.webContents.on("before-input-event", (evento, entrada) => {
+    const f12 = entrada.key === "F12";
+    const combo = entrada.control && entrada.shift && entrada.key.toLowerCase() === "i";
+    if (f12 || combo) {
+      janela.webContents.toggleDevTools();
+      evento.preventDefault();
+    }
+  });
 
   // Link externo abre no navegador do sistema, não dentro do app
   janela.webContents.setWindowOpenHandler(({ url }) => {

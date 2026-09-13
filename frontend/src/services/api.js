@@ -8,10 +8,10 @@
  * os dados da própria empresa.
  */
 
-import { computeReadingStats } from "../utils/readingStats";
-import { isAdmin, currentEmpresaId } from "../utils/auth";
+import { computeReadingStats } from "../utils/readingStats.js";
+import { isAdmin, currentEmpresaId } from "../utils/auth.js";
 
-export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
+export const API_URL = (import.meta.env?.VITE_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
 const TIMEOUT_MS = 5000;
 
 let _backendOnline = null;

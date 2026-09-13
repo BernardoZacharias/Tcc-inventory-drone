@@ -81,9 +81,9 @@ export default function Dashboard({ setPage, goToCompany }) {
 
   useEffect(() => {
     mountedRef.current = true;
-    loadAll(true);
+    const initialTimer = setTimeout(() => loadAll(true), 0);
     const id = setInterval(() => { if (!document.hidden) loadAll(false); }, 6000);
-    return () => { mountedRef.current = false; requestRef.current = null; clearInterval(id); };
+    return () => { mountedRef.current = false; requestRef.current = null; clearTimeout(initialTimer); clearInterval(id); };
   }, [loadAll]);
 
   async function addCompany() {

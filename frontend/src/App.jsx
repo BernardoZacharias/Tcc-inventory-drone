@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import useReveal from "./hooks/useReveal";
 import LoadingScreen from "./components/LoadingScreen";
+import CursorDrone from "./components/CursorDrone";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -17,7 +18,7 @@ import Drones from "./pages/Drones";
 import Readings from "./pages/Readings";
 import Operators from "./pages/Operators";
 import { getCurrentUser } from "./utils/auth";
-import { PAGE_TITLES, resolveRoute } from "./utils/navigation";
+import { PAGE_TITLES, resolveRoute, defaultRoute, isDesktop } from "./utils/navigation";
 
 function hasSession() {
   try { return Boolean(getCurrentUser() && localStorage.getItem("token")); }
@@ -25,12 +26,20 @@ function hasSession() {
 }
 
 function readRoute() {
-  const requestedPage = window.location.hash.startsWith("#/") ? window.location.hash.slice(2) : "home";
-  return resolveRoute(requestedPage, window.history.state?.gestock?.company, hasSession());
+  const autenticado = hasSession();
+  // Sem hash na URL (o caso do aplicativo, que abre em file://) a tela
+  // inicial vem do ambiente: site abre na landing, app abre no trabalho.
+  const requestedPage = window.location.hash.startsWith("#/")
+    ? window.location.hash.slice(2)
+    : defaultRoute(autenticado);
+  return resolveRoute(requestedPage, window.history.state?.gestock?.company, autenticado);
 }
 
 function shouldShowIntro() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+  // A abertura animada apresenta a marca a quem chega pelo site. Num
+  // aplicativo de trabalho ela só atrasaria o login.
+  if (isDesktop()) return false;
   if (window.location.hash && window.location.hash !== "#/home") return false;
   try { return !sessionStorage.getItem("gestock-intro-seen"); }
   catch { return true; }
@@ -77,7 +86,7 @@ export default function App() {
     document.title = `${PAGE_TITLES[page]} · Gestock`;
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     if (booting) return;
-    const heading = document.querySelector(".app-view main h1, .app-view main h2");
+    const heading = document.querySelector(".app-view h1");
     if (heading) {
       heading.tabIndex = -1;
       heading.focus({ preventScroll: true });
@@ -114,6 +123,7 @@ export default function App() {
         {page === "operators"  && <Operators setPage={setPage} />}
       </div>
       {booting && <LoadingScreen onComplete={finishIntro} />}
+      {!booting && ["home", "about", "technology"].includes(page) && <CursorDrone />}
     </>
   );
 }

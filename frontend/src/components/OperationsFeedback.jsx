@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { AlertCircle, LoaderCircle, RefreshCw, Search } from "lucide-react";
 import "../styles/OperationsUX.css";
 
@@ -15,12 +16,13 @@ export function OperationsFeedback({ loading, error, updatedAt, onRetry }) {
 }
 
 export function OperationsSearch({ value, onChange, label, placeholder }) {
+  const inputId = useId();
   return (
-    <label className="operations-search">
-      <span className="operations-sr-only">{label}</span>
+    <div className="operations-search">
+      <label htmlFor={inputId} className="operations-sr-only">{label}</label>
       <Search size={16} aria-hidden="true" />
-      <input type="search" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder || label} />
+      <input id={inputId} type="search" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder || label} />
       {value && <button type="button" onClick={() => onChange("")} aria-label={`Limpar ${label.toLowerCase()}`}>Limpar</button>}
-    </label>
+    </div>
   );
 }

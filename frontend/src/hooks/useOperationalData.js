@@ -38,11 +38,12 @@ export function useOperationalData(fetchers, { interval = 0, enabled = true } = 
 
   useEffect(() => {
     mounted.current = true;
-    refresh();
+    const initialTimer = setTimeout(() => refresh(), 0);
     const timer = interval && enabled ? setInterval(() => { if (!document.hidden) refresh({ silent: true }); }, interval) : null;
     return () => {
       mounted.current = false;
       inFlight.current = null;
+      clearTimeout(initialTimer);
       if (timer) clearInterval(timer);
     };
   }, [enabled, interval, refresh]);

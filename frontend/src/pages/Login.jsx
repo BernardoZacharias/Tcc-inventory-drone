@@ -8,6 +8,7 @@ import logo from "../assets/logo-gestock.png";
 
 import "../styles/Login.css";
 import "../styles/PublicUX.css";
+import { isDesktop } from "../utils/navigation";
 
 
 export default function Login({ setPage }) {
@@ -93,9 +94,12 @@ export default function Login({ setPage }) {
 
   return (
     <main className="login-page">
+      {/* No aplicativo não há landing page para onde voltar. */}
+      {!isDesktop() && (
       <button className="login-back" onClick={() => setPage("home")}>
         ← Voltar ao início
       </button>
+      )}
 
       <motion.div
         className="login-brand"

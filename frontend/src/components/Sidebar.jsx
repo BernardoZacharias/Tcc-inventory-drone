@@ -7,6 +7,7 @@ import logo from "../assets/logo-gestock.png";
 import ThemeToggle from "./ThemeToggle";
 import NavigationDialog from "./NavigationDialog";
 import { isAdmin, getCurrentUser, logout } from "../utils/auth";
+import { isDesktop } from "../utils/navigation";
 
 const BASE_ITEMS = [
   { key: "dashboard",  label: "Dashboard",  icon: LayoutDashboard },
@@ -31,7 +32,9 @@ export default function Sidebar({ active, setPage }) {
 
   function handleLogout() {
     logout();
-    setPage("home");
+    // No aplicativo o destino depois de sair é a tela de acesso;
+    // no site, a landing page.
+    setPage(isDesktop() ? "login" : "home");
   }
 
   return (
