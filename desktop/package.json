@@ -48,7 +48,13 @@
         "filter": [
           "**/*",
           "!node_modules/.cache/**",
-          "!scripts/_*"
+          "!node_modules/nodemon/**",
+          "!node_modules/.bin/**",
+          "!scripts/_*",
+          "!**/*.map",
+          "!**/test/**",
+          "!**/tests/**",
+          "!**/*.md"
         ]
       },
       {
