@@ -35,7 +35,6 @@ def _aplicar_opcoes_ffmpeg(transport: str, timeout_us: int) -> None:
     FFmpeg ignora a opção que não conhece em vez de falhar.
     """
     opcoes = [
-        f"rtsp_transport;{transport}",
         "fflags;nobuffer",
         "flags;low_delay",
         "max_delay;500000",
@@ -43,6 +42,11 @@ def _aplicar_opcoes_ffmpeg(transport: str, timeout_us: int) -> None:
         f"timeout;{timeout_us}",
         "reorder_queue_size;0",
     ]
+    # "auto": nao impoe transporte. O firmware do FLOW-UFO responde
+    # 461 (Unsupported Transport) quando a flag e forcada.
+    if transport != "auto":
+        opcoes.insert(0, f"rtsp_transport;{transport}")
+
     os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "|".join(opcoes)
 
 
@@ -56,7 +60,7 @@ class RtspGenericDriver(BaseDroneDriver):
         self,
         url: str,
         *,
-        transport: str = "tcp",
+        transport: str = "auto",
         open_timeout: float = 10.0,
         socket_timeout_us: int = 5_000_000,
     ) -> None:

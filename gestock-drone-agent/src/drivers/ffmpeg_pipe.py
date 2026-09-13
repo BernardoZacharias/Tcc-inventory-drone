@@ -48,7 +48,17 @@ def ffprobe_disponivel() -> bool:
     return shutil.which("ffprobe") is not None
 
 
-def descobrir_resolucao(url: str, transport: str = "tcp",
+def _args_transporte(transport: str) -> list:
+    """
+    O firmware do FLOW-UFO responde 461 (Unsupported Transport) quando
+    o transporte e imposto. Com "auto" nao passamos a flag e deixamos o
+    ffmpeg negociar - que e exatamente o que o `ffplay rtsp://...` puro
+    faz, e foi assim que o stream funcionou no teste manual.
+    """
+    return [] if transport == "auto" else ["-rtsp_transport", transport]
+
+
+def descobrir_resolucao(url: str, transport: str = "auto",
                         timeout: float = 12.0) -> Optional[Tuple[int, int]]:
     """
     Pergunta ao ffprobe qual a resolução do stream.
@@ -61,7 +71,7 @@ def descobrir_resolucao(url: str, transport: str = "tcp",
     if ffprobe_disponivel():
         cmd = [
             "ffprobe", "-v", "error",
-            "-rtsp_transport", transport,
+            *_args_transporte(transport),
             "-select_streams", "v:0",
             "-show_entries", "stream=width,height",
             "-of", "json", url,
@@ -85,7 +95,7 @@ def descobrir_resolucao(url: str, transport: str = "tcp",
     log.debug("Tentando descobrir a resolucao pelo banner do ffmpeg...")
     cmd = [
         "ffmpeg", "-hide_banner",
-        "-rtsp_transport", transport,
+        *_args_transporte(transport),
         "-i", url, "-t", "1", "-f", "null", "-",
     ]
     try:
@@ -113,7 +123,7 @@ class FfmpegPipeDriver(BaseDroneDriver):
         self,
         url: str,
         *,
-        transport: str = "tcp",
+        transport: str = "auto",
         width: Optional[int] = None,
         height: Optional[int] = None,
         timeout_us: int = 5_000_000,
@@ -144,7 +154,7 @@ class FfmpegPipeDriver(BaseDroneDriver):
             "-flags", "low_delay",
             "-probesize", "32",
             "-analyzeduration", "0",
-            "-rtsp_transport", self.transport,
+            *_args_transporte(self.transport),
             "-timeout", str(self.timeout_us),
             "-i", self.url,
             "-an", "-sn",              # sem áudio, sem legenda

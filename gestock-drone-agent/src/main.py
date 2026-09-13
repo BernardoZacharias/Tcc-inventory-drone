@@ -115,8 +115,10 @@ def main(argv: Optional[list] = None) -> int:
     p.add_argument("--ip", default="192.168.1.1", help="IP do drone")
     p.add_argument("--port", type=int, default=7070, help="porta RTSP do drone")
     p.add_argument("--path", default="/webcam", help="endpoint RTSP")
-    p.add_argument("--transport", default="tcp", choices=["tcp", "udp"],
-                   help="transporte RTSP (padrão tcp: mais estável em Wi-Fi)")
+    p.add_argument("--transport", default="auto", choices=["auto", "tcp", "udp"],
+                   help="transporte RTSP. 'auto' (padrão) NÃO impõe transporte "
+                        "e deixa o ffmpeg negociar — o FLOW-UFO responde 461 "
+                        "(Unsupported Transport) quando é forçado")
     p.add_argument("--backend", default="opencv", choices=["opencv", "ffmpeg"],
                    help="quem decodifica o vídeo. Use 'ffmpeg' se o OpenCV "
                         "quebrar com 'illegal hardware instruction'")

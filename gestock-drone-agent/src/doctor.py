@@ -49,11 +49,45 @@ def _rodar_isolado(codigo: str, timeout: float = 25.0) -> Tuple[bool, str]:
     return False, (erro[-1] if erro else f"código de saída {r.returncode}")
 
 
-def checar_basico() -> None:
+def checar_basico() -> bool:
+    """Retorna True se o numpy funciona de verdade (não só importa)."""
     print(f"{OK} Python {sys.version.split()[0]}  ({sys.executable})")
 
-    ok, saida = _rodar_isolado("import numpy; print(numpy.__version__)")
-    print(f"{OK if ok else FALHA} numpy {saida}")
+    ok, versao = _rodar_isolado("import numpy; print(numpy.__version__)")
+    if not ok:
+        print(f"{FALHA} numpy nem importa: {versao}")
+        _dica_simd("numpy")
+        return False
+    print(f"{OK} numpy {versao} importa")
+
+    # Importar não basta: as instruções SIMD só entram em ação quando você
+    # realmente mexe em array. É aqui que o SIGILL costuma aparecer numa
+    # CPU antiga — e é exatamente o que o driver ffmpeg faz a cada frame.
+    ok, detalhe = _rodar_isolado(
+        "import numpy as np;"
+        "b = bytes(640*480*3);"
+        "a = np.frombuffer(b, dtype=np.uint8).reshape((480, 640, 3));"
+        "print(int(a.mean()) + int(a.astype('float32').sum()))"
+    )
+    if ok:
+        print(f"{OK} numpy opera sobre arrays (frombuffer/reshape/mean)")
+        return True
+
+    print(f"{FALHA} numpy QUEBRA ao operar em array: {detalhe}")
+    _dica_simd("numpy")
+    return False
+
+
+def _dica_simd(pacote: str) -> None:
+    print(f"        → O binário do {pacote} usa instruções que esta CPU não tem.")
+    print("          Opções, da mais simples para a mais definitiva:")
+    print(f"          1) desligar o SIMD avançado:")
+    print(f"             NPY_DISABLE_CPU_FEATURES=\"AVX512F AVX512CD AVX2 FMA3\" python -m src.main ...")
+    print(f"          2) versão compilada para a sua máquina (Arch):")
+    print(f"             sudo pacman -S python-{pacote}")
+    print(f"             e recriar o venv com --system-site-packages")
+    print(f"          3) versão mais antiga, com baseline menos agressiva:")
+    print(f"             pip install '{pacote}<2'")
 
 
 def checar_opencv() -> bool:
@@ -126,9 +160,10 @@ def checar_stream(url: str, transport: str, tem_ffmpeg: bool) -> Optional[bool]:
         return None
 
     print(f"       testando o stream por 6s: {url}")
-    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error",
-           "-rtsp_transport", transport, "-i", url,
-           "-t", "2", "-f", "null", "-"]
+    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error"]
+    if transport != "auto":
+        cmd += ["-rtsp_transport", transport]
+    cmd += ["-i", url, "-t", "2", "-f", "null", "-"]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
     except subprocess.TimeoutExpired:
@@ -142,8 +177,8 @@ def checar_stream(url: str, transport: str, tem_ffmpeg: bool) -> Optional[bool]:
     erro = (r.stderr or "").strip().splitlines()
     print(f"{FALHA} ffmpeg não decodificou: {erro[-1] if erro else '?'}")
     if any("461" in l or "Unsupported Transport" in l for l in erro):
-        print(f"        → tente o outro transporte: --transport "
-              f"{'udp' if transport == 'tcp' else 'tcp'}")
+        print("        → 461 Unsupported Transport: este firmware recusa")
+        print("          transporte imposto. Use --transport auto (padrão).")
     return False
 
 
@@ -155,7 +190,7 @@ def main(argv: Optional[list] = None) -> int:
     p.add_argument("--ip", default="192.168.1.1")
     p.add_argument("--port", type=int, default=7070)
     p.add_argument("--path", default="/webcam")
-    p.add_argument("--transport", default="tcp", choices=["tcp", "udp"])
+    p.add_argument("--transport", default="auto", choices=["auto", "tcp", "udp"])
     p.add_argument("--skip-stream", action="store_true")
     args = p.parse_args(argv)
 
@@ -163,7 +198,7 @@ def main(argv: Optional[list] = None) -> int:
 
     print("\n=== Gestock Drone Agent — diagnóstico ===\n")
     print("-- ambiente --")
-    checar_basico()
+    numpy_ok = checar_basico()
     opencv_ok = checar_opencv()
 
     print("\n-- ffmpeg do sistema --")

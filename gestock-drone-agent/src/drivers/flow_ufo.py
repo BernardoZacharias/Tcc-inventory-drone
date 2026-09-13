@@ -40,7 +40,7 @@ class FlowUfoDriver(RtspGenericDriver):
         port: int = DEFAULT_PORT,
         path: str = DEFAULT_PATH,
         *,
-        transport: str = "tcp",
+        transport: str = "auto",
         **kwargs: object,
     ) -> None:
         self.ip = ip
