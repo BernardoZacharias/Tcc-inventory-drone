@@ -71,11 +71,35 @@
   --ease-fluid: var(--ease-fluid);
 }
 
-/* Varredura do scanner descendo a grade do hangar.
-   Só transform: não força layout, roda na GPU. */
-@keyframes varredura {
-  0%   { transform: translateY(12vh);  opacity: 0; }
-  12%  { opacity: 0.5; }
-  88%  { opacity: 0.5; }
-  100% { transform: translateY(86vh); opacity: 0; }
+/* ── Cena do hangar ──────────────────────────────────────────
+   Tudo aqui anima só transform/opacity: roda na GPU, sem layout. */
+
+/* O drone pairando: sobe, desce e deriva de leve, como um
+   quadricóptero segurando posição. Nunca imóvel — isso mataria
+   a impressão de que ele está voando. */
+@keyframes pairar {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-1.2deg); }
+  33%      { transform: translate3d(-10px, -14px, 0) rotate(0.8deg); }
+  66%      { transform: translate3d(8px, -7px, 0) rotate(-0.4deg); }
+}
+
+/* O feixe do scanner varrendo a prateleira */
+@keyframes feixe {
+  0%, 100% { opacity: 0.25; transform: scaleY(0.94); }
+  50%      { opacity: 0.75; transform: scaleY(1); }
+}
+
+/* Etiqueta do HUD "travando" no item lido */
+@keyframes travar {
+  0%   { opacity: 0; transform: translateX(-10px) scale(0.96); }
+  10%  { opacity: 1; transform: translateX(0) scale(1); }
+  85%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(6px) scale(0.99); }
+}
+
+/* Sombra do drone no piso: encolhe quando ele sobe */
+@keyframes sombra {
+  0%, 100% { opacity: 0.30; transform: scaleX(1); }
+  33%      { opacity: 0.16; transform: scaleX(0.84); }
+  66%      { opacity: 0.24; transform: scaleX(0.93); }
 }

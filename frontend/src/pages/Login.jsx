@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import {
   Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle,
-  LoaderCircle, Check, Minus, X, ScanLine,
+  LoaderCircle, Check, Minus, X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "../services/toast";
@@ -9,7 +9,9 @@ import { API_URL } from "../services/api";
 import { setCurrentUser, isAdminEmail } from "../utils/auth";
 import { isDesktop } from "../utils/navigation";
 import usePreflight from "../hooks/usePreflight";
+import HangarScene from "../components/HangarScene";
 import logo from "../assets/logo-gestock.png";
+import marca from "../assets/marca-gestock.png";
 
 const SUAVE = [0.23, 1, 0.32, 1];
 
@@ -21,34 +23,6 @@ const LUZES = {
   falha:    { cor: "text-bad",   Icone: X },
   checando: { cor: "text-faint", Icone: Minus },
 };
-
-function LinhaStatus({ item, indice }) {
-  const { cor, Icone } = LUZES[item.estado] ?? LUZES.checando;
-  const pendente = item.estado === "checando";
-
-  return (
-    <motion.li
-      className="flex items-center gap-3 py-2"
-      initial={{ opacity: 0, x: -8 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: 0.25 + indice * 0.06, duration: 0.4, ease: SUAVE }}
-    >
-      <span
-        className={`grid size-5 place-items-center rounded-full border border-line ${cor} ${
-          pendente ? "animate-pulse" : ""
-        }`}
-      >
-        <Icone size={11} strokeWidth={3} aria-hidden="true" />
-      </span>
-
-      <span className="text-[13px] font-medium text-body">{item.rotulo}</span>
-
-      <span className="ml-auto font-mono text-[11px] tabular-nums text-faint">
-        {item.detalhe || "—"}
-      </span>
-    </motion.li>
-  );
-}
 
 function Campo({ id, name, rotulo, tipo, icone: Icone, erro, acao, ...resto }) {
   return (
@@ -193,113 +167,102 @@ export default function Login({ setPage }) {
   };
 
   return (
-    <main className="grid min-h-dvh grid-cols-1 bg-bg-0 lg:grid-cols-[1.08fr_0.92fr]">
-      {/* ═══════════ HANGAR — contexto e prontidão ═══════════ */}
-      <aside className="relative isolate hidden overflow-hidden border-r border-line lg:flex lg:flex-col lg:justify-between lg:p-14 xl:p-20">
-        {/* Grade de porta-paletes vista de cima. É estrutura, não enfeite:
-            o produto sobrevoa exatamente isto. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.55]
-                     [background-image:linear-gradient(var(--line)_1px,transparent_1px),linear-gradient(90deg,var(--line)_1px,transparent_1px)]
-                     [background-size:72px_72px]
-                     [mask-image:radial-gradient(ellipse_75%_65%_at_35%_40%,#000_25%,transparent_78%)]"
-        />
-        {/* Varredura do scanner descendo a grade */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 -z-10 h-px
-                     bg-gradient-to-r from-transparent via-accent to-transparent
-                     opacity-45 motion-safe:animate-[varredura_7s_var(--ease-fluid)_infinite]
-                     motion-reduce:top-1/2"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-40 -top-40 -z-10 size-[36rem] rounded-full
-                     bg-[radial-gradient(circle,var(--accent-soft),transparent_65%)] blur-2xl"
-        />
+    <main className="relative min-h-dvh overflow-hidden bg-bg-0">
+      {/* ── A cena cobre a TELA INTEIRA ──
+          Antes ela morava só na metade esquerda e o lado direito ficava
+          um vazio preto — o cartão boiava no nada. Cobrindo tudo, o
+          vidro tem o que refratar e a tela deixa de ter um lado morto. */}
+      <div className="absolute inset-0 hidden lg:block">
+        <HangarScene />
+      </div>
 
-        <motion.img
-          src={logo}
-          alt="Gestock"
-          className="h-11 w-auto self-start"
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: SUAVE }}
-        />
+      {/* Véu da direita: desfoca e escurece a cena atrás do cartão,
+          esvaindo para a esquerda — sem emenda dura entre os lados. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%]
+                   backdrop-blur-2xl lg:block
+                   [mask-image:linear-gradient(to_right,transparent,#000_26%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] lg:block
+                   [background:linear-gradient(to_right,transparent,color-mix(in_srgb,var(--bg-0)_90%,transparent)_34%)]"
+      />
 
-        <motion.div
-          className="max-w-[30ch]"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08, duration: 0.6, ease: SUAVE }}
-        >
-          <span className="inline-flex items-center gap-2 rounded-full border border-line
-                           bg-surface-2 px-3 py-1 text-[10px] font-semibold uppercase
-                           tracking-[0.18em] text-muted">
-            <ScanLine size={12} strokeWidth={2} aria-hidden="true" />
-            Inventário aéreo
-          </span>
+      <div className="relative grid min-h-dvh grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
+        {/* ── Coluna da cena: marca e proposta ── */}
+        <aside className="relative hidden flex-col justify-between p-12 lg:flex xl:p-16">
+          <motion.img
+            src={logo}
+            alt="Gestock"
+            className="h-10 w-auto self-start drop-shadow-[0_2px_16px_rgba(0,0,0,1)]"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: SUAVE }}
+          />
 
-          <h2 className="mt-6 font-display text-[clamp(2rem,2.6vw,2.9rem)] font-semibold
-                         leading-[1.08] tracking-[-0.035em] text-ink text-balance">
-            O galpão inteiro,
-            <br />
-            contado de cima.
-          </h2>
+          <motion.div
+            className="max-w-[26ch]"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.7, ease: SUAVE }}
+          >
+            {/* Faixa escura local: o piso do corredor é a parte mais
+                clara da foto e engolia o texto branco. */}
+            <div className="-m-6 rounded-lg bg-[rgba(5,7,12,0.62)] p-6 backdrop-blur-[3px]">
+              {/* branco fixo: a foto atrás é escura nos dois temas */}
+              <h2 className="font-display text-[clamp(1.9rem,2.2vw,2.5rem)] font-semibold
+                             leading-[1.06] tracking-[-0.035em] text-white text-balance">
+                O galpão inteiro,
+                <br />
+                contado de cima.
+              </h2>
 
-          <p className="mt-4 text-[15px] leading-relaxed text-muted text-pretty">
-            O drone sobrevoa as prateleiras, lê os QR Codes e o estoque se
-            atualiza sozinho — sem escada, sem prancheta.
-          </p>
-        </motion.div>
+              <p className="mt-3.5 max-w-[34ch] text-[14.5px] leading-relaxed text-white/70 text-pretty">
+                O drone sobrevoa as prateleiras, lê os QR Codes e o estoque se
+                atualiza sozinho.
+              </p>
 
-        {/* ─── Assinatura: checagem pré-voo ───
-            Responde antes de o operador perguntar se dá para trabalhar. */}
-        <motion.section
-          aria-label="Situação do sistema"
-          className="w-full max-w-sm rounded-lg border border-line bg-surface-1 p-5 backdrop-blur-sm"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.16, duration: 0.6, ease: SUAVE }}
-        >
-          <header className="mb-1 flex items-center justify-between">
-            <h3 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
-              Checagem pré-voo
-            </h3>
-            <span
-              className={`font-mono text-[11px] ${
-                preflight.estadoGeral === "ok" ? "text-ok"
-                  : preflight.estadoGeral === "falha" ? "text-bad"
-                  : preflight.estadoGeral === "alerta" ? "text-warn" : "text-faint"
-              }`}
-            >
-              {preflight.resumo}
-            </span>
-          </header>
+              <div className="mt-6 flex flex-col gap-1.5">
+                {preflight.itens.map((item) => {
+                  const { cor } = LUZES[item.estado] ?? LUZES.checando;
+                  return (
+                    <span key={item.id} className="flex items-center gap-2.5">
+                      <span
+                        className={`size-1.5 rounded-full bg-current ${cor} ${
+                          item.estado === "checando" ? "animate-pulse" : ""
+                        }`}
+                      />
+                      <span className="min-w-[7rem] text-[11.5px] font-medium text-white/75">{item.rotulo}</span>
+                      <span className="font-mono text-[10.5px] tabular-nums text-white/45">
+                        {item.detalhe || "—"}
+                      </span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        </aside>
 
-          <ul className="divide-y divide-line">
-            {preflight.itens.map((item, i) => (
-              <LinhaStatus key={item.id} item={item} indice={i} />
-            ))}
-          </ul>
-        </motion.section>
-      </aside>
-
-      {/* ═══════════ ACESSO — o foco da tela ═══════════ */}
-      <section className="flex items-center justify-center bg-bg-1 px-6 py-14 sm:px-10 lg:px-14">
+        {/* ── Coluna do acesso ── */}
+        <section className="flex items-center justify-center px-6 py-14 sm:px-10 lg:px-12">
         <motion.form
           onSubmit={handleLogin}
           noValidate
           aria-labelledby="login-title"
           aria-busy={loading}
-          className="w-full max-w-[26rem]"
+          className="relative w-full max-w-[25rem] rounded-md border border-line-2
+                     bg-[color-mix(in_srgb,var(--bg-1)_82%,transparent)] p-8 backdrop-blur-2xl sm:p-10
+                     shadow-[0_40px_100px_-25px_rgba(0,0,0,0.95),inset_0_1px_0_0_rgba(255,255,255,0.07)]"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: SUAVE }}
         >
           {/* Marca aparece aqui só quando o hangar está escondido */}
-          <img src={logo} alt="Gestock" className="mb-10 h-9 w-auto lg:hidden" />
+          {/* Só o símbolo: o wordmark é prateado e some no cartão claro. */}
+          <img src={marca} alt="Gestock" className="mb-9 h-10 w-auto lg:hidden" />
 
           <h1
             id="login-title"
@@ -430,7 +393,8 @@ export default function Login({ setPage }) {
             </div>
           )}
         </motion.form>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

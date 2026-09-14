@@ -257,115 +257,131 @@
 
 /* ─────────────────────────────────────────────
    4. RESET
+   ─────────────────────────────────────────────
+   Este bloco fica em @layer base DE PROPOSITO.
+
+   O Tailwind gera os utilitarios dentro de @layer utilities, e na
+   cascata CSS qualquer regra SEM layer vence qualquer regra COM
+   layer, independente de especificidade. Com o reset unlayered,
+   `* { padding: 0 }` derrotava `.p-8`, e `img { display: block }`
+   derrotava `lg:hidden` — os utilitarios simplesmente nao faziam
+   efeito e era dificil enxergar o motivo.
+
+   Em @layer base o reset continua valendo como piso e os
+   utilitarios voltam a ter a ultima palavra. Os tokens (:root)
+   seguem fora de layer, porque variavel nao entra nessa disputa.
    ───────────────────────────────────────────── */
-*,
-*::before,
-*::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+@layer base {
 
-html {
-  scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
-  background: var(--bg-0);
-}
+  *,
+  *::before,
+  *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
-html,
-body {
-  min-height: 100%;
-}
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    background: var(--bg-0);
+  }
 
-/* O fundo visivel fica AQUI, num elemento comum.
-   html/body alimentam o canvas do navegador, que nao reinvalida o
-   var() quando o tema troca em tempo real (so acertaria apos F5).
-   O #root e um elemento normal: repinta na hora. */
-/* NOTA IMPORTANTE — nao coloque `transition` de background-color/color
-   em html, body ou #root.
-   Quando o tema troca, o que muda e o valor de uma custom property
-   (--bg-0). Com uma transition declarada nesses elementos, o motor
-   nao reavalia o var() e o fundo fica CONGELADO no tema anterior ate
-   dar F5. Testado e reproduzido. A troca instantanea e o correto aqui. */
-#root {
-  min-height: 100dvh;
-  background: var(--bg-0);
-  position: relative;
-  /* cria contexto de empilhamento para o ::before poder usar z-index:-1
-     sem sumir atras do proprio fundo do #root */
-  isolation: isolate;
-}
+  html,
+  body {
+    min-height: 100%;
+  }
 
-.app-view {
-  min-height: 100dvh;
-}
+  /* O fundo visivel fica AQUI, num elemento comum.
+     html/body alimentam o canvas do navegador, que nao reinvalida o
+     var() quando o tema troca em tempo real (so acertaria apos F5).
+     O #root e um elemento normal: repinta na hora. */
+  /* NOTA IMPORTANTE — nao coloque `transition` de background-color/color
+     em html, body ou #root.
+     Quando o tema troca, o que muda e o valor de uma custom property
+     (--bg-0). Com uma transition declarada nesses elementos, o motor
+     nao reavalia o var() e o fundo fica CONGELADO no tema anterior ate
+     dar F5. Testado e reproduzido. A troca instantanea e o correto aqui. */
+  #root {
+    min-height: 100dvh;
+    background: var(--bg-0);
+    position: relative;
+    /* cria contexto de empilhamento para o ::before poder usar z-index:-1
+       sem sumir atras do proprio fundo do #root */
+    isolation: isolate;
+  }
 
-body {
-  background: transparent; /* o fundo vem do <html> — ver nota acima */
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: var(--fs-base);
-  line-height: 1.6;
-  font-weight: 400;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  overflow-x: hidden;
-}
+  .app-view {
+    min-height: 100dvh;
+  }
 
-/* Grao sutil — tira a esterilidade do fundo chapado */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-}
+  body {
+    background: transparent; /* o fundo vem do <html> — ver nota acima */
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: var(--fs-base);
+    line-height: 1.6;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
 
-h1, h2, h3, h4, h5 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  line-height: 1.12;
-  letter-spacing: -0.022em;
-  color: var(--text-strong);
-  text-wrap: balance;
-}
+  /* Grao sutil — tira a esterilidade do fundo chapado */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
 
-h1 { font-size: var(--fs-2xl); letter-spacing: -0.032em; font-weight: 700; }
-h2 { font-size: var(--fs-xl); letter-spacing: -0.026em; }
-h3 { font-size: var(--fs-lg); }
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.12;
+    letter-spacing: -0.022em;
+    color: var(--text-strong);
+    text-wrap: balance;
+  }
 
-p { text-wrap: pretty; }
+  h1 { font-size: var(--fs-2xl); letter-spacing: -0.032em; font-weight: 700; }
+  h2 { font-size: var(--fs-xl); letter-spacing: -0.026em; }
+  h3 { font-size: var(--fs-lg); }
 
-a { color: inherit; text-decoration: none; }
+  p { text-wrap: pretty; }
 
-img, svg, video {
-  display: block;
-  max-width: 100%;
-}
+  a { color: inherit; text-decoration: none; }
 
-button, input, select, textarea {
-  font-family: inherit;
-  font-size: inherit;
-  color: inherit;
-}
+  img, svg, video {
+    display: block;
+    max-width: 100%;
+  }
 
-button {
-  cursor: pointer;
-  background: none;
-  border: none;
-}
+  button, input, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+  }
 
-/* Numeros alinham em colunas — essencial num painel de dados */
-table, .num, .metric-value, td, th {
-  font-variant-numeric: tabular-nums;
-}
+  button {
+    cursor: pointer;
+    background: none;
+    border: none;
+  }
 
-::selection {
-  background: var(--accent-soft);
-  color: var(--text-strong);
+  /* Numeros alinham em colunas — essencial num painel de dados */
+  table, .num, .metric-value, td, th {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--text-strong);
+  }
 }
 
 /* ─────────────────────────────────────────────
