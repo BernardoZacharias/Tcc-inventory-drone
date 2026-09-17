@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { API_URL } from "../services/api";
+import { getApiUrl } from "../services/api";
 import { isDesktop } from "../utils/navigation";
+import { preflightStatus } from "../utils/preflightStatus";
 
 /*
  * usePreflight — checagem pré-voo dos componentes do sistema.
@@ -31,6 +32,8 @@ export default function usePreflight() {
 
   useEffect(() => {
     let vivo = true;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 6000);
     const atualiza = (id, estado, detalhe) =>
       vivo && setItens((atual) =>
         atual.map((i) => (i.id === id ? { ...i, estado, detalhe } : i))
@@ -38,47 +41,52 @@ export default function usePreflight() {
 
     (async () => {
       // API + banco numa tacada: /empresas só responde se o banco responder
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 6000);
       try {
-        const r = await fetch(`${API_URL}/empresas`, { signal: ctrl.signal });
+        const baseUrl = await getApiUrl();
+        if (!vivo) return;
+        const r = await fetch(`${baseUrl}/empresas`, { signal: ctrl.signal });
         const dados = await r.json().catch(() => null);
-
-        if (r.ok) {
-          atualiza("api", "ok", "conectado");
-          const total = dados?.data?.length;
-          if (typeof total === "number") {
-            atualiza("banco", "ok", `${total} empresa${total === 1 ? "" : "s"}`);
-          } else {
-            atualiza("banco", "alerta", "sem resposta");
-          }
-        } else {
-          atualiza("api", "alerta", `erro ${r.status}`);
-          atualiza("banco", "alerta", "não verificado");
-        }
+        const status = preflightStatus(r.status, dados);
+        atualiza("api", ...status.api);
+        atualiza("banco", ...status.banco);
       } catch (e) {
         atualiza("api", "falha", e.name === "AbortError" ? "sem resposta" : "offline");
-        atualiza("banco", "falha", "inacessível");
+        atualiza("banco", "alerta", "não verificado");
       } finally {
         clearTimeout(t);
       }
+    })();
 
+    let agentTimer;
+    (async () => {
       // Só no aplicativo: o Agent precisa de Python na máquina
       if (isDesktop()) {
         try {
-          const info = await window.gestock.info();
+          const info = await Promise.race([
+            window.gestock.info(),
+            new Promise((_, reject) => {
+              agentTimer = setTimeout(() => reject(new Error("timeout")), 6000);
+            }),
+          ]);
           if (info?.python) {
-            atualiza("agente", "ok", "pronto");
+            atualiza("agente", "ok", "Python encontrado");
           } else {
             atualiza("agente", "alerta", "Python não encontrado");
           }
         } catch {
           atualiza("agente", "alerta", "indisponível");
+        } finally {
+          clearTimeout(agentTimer);
         }
       }
     })();
 
-    return () => { vivo = false; };
+    return () => {
+      vivo = false;
+      ctrl.abort();
+      clearTimeout(t);
+      clearTimeout(agentTimer);
+    };
   }, []);
 
   const checando = itens.some((i) => i.estado === PENDENTE);
@@ -94,7 +102,7 @@ export default function usePreflight() {
         ? "sistema indisponível"
         : alertas
           ? "pronto com ressalvas"
-          : "sistema pronto",
+          : "verificações concluídas",
     estadoGeral: checando ? PENDENTE : falhas ? "falha" : alertas ? "alerta" : "ok",
   };
 }

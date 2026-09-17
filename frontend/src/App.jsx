@@ -86,6 +86,11 @@ export default function App() {
     document.title = `${PAGE_TITLES[page]} · Gestock`;
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     if (booting) return;
+    const initialField = document.querySelector(".app-view [data-route-autofocus]");
+    if (initialField && window.matchMedia("(min-width: 1024px)").matches) {
+      initialField.focus({ preventScroll: true });
+      return;
+    }
     const heading = document.querySelector(".app-view h1");
     if (heading) {
       heading.tabIndex = -1;

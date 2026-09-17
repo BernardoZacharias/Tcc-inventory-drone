@@ -1,27 +1,28 @@
 import { motion } from "framer-motion";
 import {
   Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle,
-  LoaderCircle, Check, Minus, X,
+  LoaderCircle,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "../services/toast";
-import { API_URL } from "../services/api";
+import { getApiUrl } from "../services/api";
 import { setCurrentUser, isAdminEmail } from "../utils/auth";
 import { isDesktop } from "../utils/navigation";
 import usePreflight from "../hooks/usePreflight";
 import HangarScene from "../components/HangarScene";
 import logo from "../assets/logo-gestock.png";
 import marca from "../assets/marca-gestock.png";
+import "../styles/LoginAccess.css";
 
 const SUAVE = [0.23, 1, 0.32, 1];
 
 /* Luz de status: as cores só aparecem aqui, como as luzes de
    navegação de um drone. No resto da tela, cor é só o acento. */
 const LUZES = {
-  ok:       { cor: "text-ok",    Icone: Check },
-  alerta:   { cor: "text-warn",  Icone: Minus },
-  falha:    { cor: "text-bad",   Icone: X },
-  checando: { cor: "text-faint", Icone: Minus },
+  ok:       { cor: "text-ok" },
+  alerta:   { cor: "text-warn" },
+  falha:    { cor: "text-bad" },
+  checando: { cor: "text-faint" },
 };
 
 function Campo({ id, name, rotulo, tipo, icone: Icone, erro, acao, ...resto }) {
@@ -29,7 +30,7 @@ function Campo({ id, name, rotulo, tipo, icone: Icone, erro, acao, ...resto }) {
     <div>
       <label
         htmlFor={id}
-        className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-faint"
+        className="login-field__label"
       >
         {rotulo}
       </label>
@@ -38,25 +39,19 @@ function Campo({ id, name, rotulo, tipo, icone: Icone, erro, acao, ...resto }) {
           apresenta. Por isso fundo mais escuro que o cartão, e não mais
           claro. O anel de foco é a única coisa que o destaca. */}
       <div
-        className="group flex items-center gap-3 rounded-md border border-line bg-surface-1
-                   px-3.5 transition-[border-color,box-shadow,background-color] duration-200
-                   focus-within:border-accent-line focus-within:bg-surface-2
-                   focus-within:shadow-[0_0_0_3px_var(--accent-soft)]
-                   has-[input[aria-invalid='true']]:border-bad
-                   has-[input[aria-invalid='true']]:bg-bad-soft"
+        className={`login-field${erro ? " login-field--invalid" : ""}`}
       >
         <Icone
           size={17}
           strokeWidth={1.75}
           aria-hidden="true"
-          className="shrink-0 text-faint transition-colors duration-200 group-focus-within:text-accent"
+          className="login-field__icon"
         />
         <input
           id={id}
           name={name}
           type={tipo}
-          className="h-12 w-full bg-transparent text-[15px] text-ink outline-none
-                     placeholder:text-faint disabled:cursor-not-allowed disabled:opacity-50"
+          className="login-field__input"
           {...resto}
         />
         {acao}
@@ -85,7 +80,12 @@ export default function Login({ setPage }) {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const requestRef = useRef(null);
+  const errorRef = useRef(null);
   const preflight = usePreflight();
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
 
   useEffect(() => () => {
     requestRef.current?.abort();
@@ -115,7 +115,9 @@ export default function Login({ setPage }) {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const baseUrl = await getApiUrl();
+      if (requestRef.current !== controller) return;
+      const response = await fetch(`${baseUrl}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, senha }),
@@ -167,7 +169,7 @@ export default function Login({ setPage }) {
   };
 
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-bg-0">
+    <main className="login-access relative min-h-dvh overflow-hidden bg-bg-0">
       {/* ── A cena cobre a TELA INTEIRA ──
           Antes ela morava só na metade esquerda e o lado direito ficava
           um vazio preto — o cartão boiava no nada. Cobrindo tudo, o
@@ -247,13 +249,13 @@ export default function Login({ setPage }) {
         </aside>
 
         {/* ── Coluna do acesso ── */}
-        <section className="flex items-center justify-center px-6 py-14 sm:px-10 lg:px-12">
+        <section className="login-access__column flex items-center justify-center px-6 py-14 sm:px-10 lg:px-12">
         <motion.form
           onSubmit={handleLogin}
           noValidate
           aria-labelledby="login-title"
           aria-busy={loading}
-          className="relative w-full max-w-[25rem] rounded-md border border-line-2
+          className="login-access__form relative w-full max-w-[25rem] rounded-md border border-line-2
                      bg-[color-mix(in_srgb,var(--bg-1)_82%,transparent)] p-8 backdrop-blur-2xl sm:p-10
                      shadow-[0_40px_100px_-25px_rgba(0,0,0,0.95),inset_0_1px_0_0_rgba(255,255,255,0.07)]"
           initial={{ opacity: 0, y: 20 }}
@@ -287,7 +289,7 @@ export default function Login({ setPage }) {
               autoComplete="username"
               autoCapitalize="none"
               spellCheck={false}
-              autoFocus
+              data-route-autofocus
               required
               disabled={loading}
               aria-invalid={Boolean(fieldErrors.email)}
@@ -310,16 +312,15 @@ export default function Login({ setPage }) {
               aria-describedby={fieldErrors.senha ? "login-password-error" : undefined}
               onChange={limpar("senha")}
               acao={
-                /* 40px de alvo: o ícone tem 17px, mas o clique não. */
+                /* O alvo de clique é maior que o ícone. */
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                   aria-pressed={showPassword}
                   aria-controls="login-password"
-                  className="-mr-2 grid size-10 shrink-0 place-items-center rounded-sm
-                             text-faint transition-colors duration-150
-                             hover:text-body focus-visible:text-accent"
+                  disabled={loading}
+                  className="login-field__action"
                 >
                   {showPassword
                     ? <EyeOff size={17} strokeWidth={1.75} aria-hidden="true" />
@@ -332,6 +333,8 @@ export default function Login({ setPage }) {
           {error && (
             <motion.div
               role="alert"
+              ref={errorRef}
+              tabIndex={-1}
               className="mt-5 flex items-start gap-2.5 rounded-md border border-bad
                          bg-bad-soft px-4 py-3 text-[13px] leading-relaxed text-body"
               initial={{ opacity: 0, y: -6 }}

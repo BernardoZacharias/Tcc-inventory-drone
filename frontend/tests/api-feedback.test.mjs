@@ -43,3 +43,18 @@ test("zero é válido quando todas as fontes confirmam lista vazia", async (t) =
   assert.equal(result.success, true);
   assert.equal(result.data.leituras, 0);
 });
+
+test("requisições do painel seguem a porta real da API desktop", async (t) => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "window");
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {
+    gestock: { desktop: true, info: async () => ({ apiUrl: "http://127.0.0.1:3006" }) },
+  } });
+  t.after(() => {
+    if (previous) Object.defineProperty(globalThis, "window", previous);
+    else delete globalThis.window;
+  });
+  const urls = [];
+  setup(t, async (url) => { urls.push(url); return new Response('{"success":true,"data":[]}'); });
+  assert.equal((await listarEmpresas()).success, true);
+  assert.deepEqual(urls, ["http://127.0.0.1:3006/api/empresas"]);
+});

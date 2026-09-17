@@ -81,6 +81,10 @@ export default function Operators({ setPage }) {
     if (await act(`sector-delete-${id}`, () => excluirSetor(id), "Setor removido")) load();
   }
 
+  const query = search.trim().toLocaleLowerCase("pt-BR");
+  const filtered = operadores.filter((o) => [o.nome, o.email, o.empresa_nome]
+    .some((value) => String(value || "").toLocaleLowerCase("pt-BR").includes(query)));
+
   /* Tela restrita ao administrador */
   if (!admin) {
     return (
@@ -178,11 +182,11 @@ export default function Operators({ setPage }) {
             <OperationsSearch value={search} onChange={setSearch} label="Buscar operador" placeholder="Nome, e-mail ou empresa" />
 
             <motion.div className="op-list" variants={stagger} initial="hidden" animate="visible">
-              {!loading && !error && operadores.length === 0 && (
-                <p className="empty-state">Nenhum operador cadastrado.</p>
+              {!loading && !error && filtered.length === 0 && (
+                <p className="empty-state">{query ? "Nenhum operador corresponde à busca." : "Nenhum operador cadastrado."}</p>
               )}
 
-              {operadores.filter((o) => [o.nome, o.email, o.empresa_nome].some((value) => String(value || "").toLocaleLowerCase("pt-BR").includes(search.trim().toLocaleLowerCase("pt-BR")))).map((o) => (
+              {filtered.map((o) => (
                 <motion.div className="operator-card" key={o.id} variants={cardPop}>
                   <div className="operator-avatar">
                     {(o.nome || "?").charAt(0).toUpperCase()}

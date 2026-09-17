@@ -10,8 +10,9 @@
 
 import { computeReadingStats } from "../utils/readingStats.js";
 import { isAdmin, currentEmpresaId } from "../utils/auth.js";
+import { getApiUrl } from "./apiEndpoint.js";
+export { API_URL, getApiUrl } from "./apiEndpoint.js";
 
-export const API_URL = (import.meta.env?.VITE_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
 const TIMEOUT_MS = 5000;
 
 let _backendOnline = null;
@@ -37,7 +38,8 @@ async function fetchWithTimeout(url, opts = {}, ms = TIMEOUT_MS) {
  */
 async function request(path, { method = "GET", body, timeout } = {}) {
   try {
-    const r = await fetchWithTimeout(`${API_URL}${path}`, {
+    const baseUrl = await getApiUrl();
+    const r = await fetchWithTimeout(`${baseUrl}${path}`, {
       method,
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: body ? JSON.stringify(body) : undefined

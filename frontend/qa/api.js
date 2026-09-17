@@ -1,6 +1,7 @@
 import { computeReadingStats } from "../src/utils/readingStats.js";
-export const API_URL = "https://example.invalid";
+export const API_URL = "/__qa/api";
 let scenario = "populated";
+export const getApiUrl = async () => `${API_URL}/${scenario}`;
 export const setScenario = (value) => { scenario = value; };
 const companies = [{ id: 1, nome: "Atlas Logística", segmento: "Distribuição", total_leituras: 3, cnpj: "", cidade: "Campinas", estado: "SP" }, { id: 2, nome: "Horizonte Armazéns", segmento: "Armazenagem", total_leituras: 1 }];
 const readings = [1, 2, 3, 4].map((id) => ({ id, empresa_id: id === 4 ? 2 : 1, empresa: id === 4 ? "Horizonte Armazéns" : "Atlas Logística", nome_produto: ["Sensor óptico industrial", "Módulo de automação", "Unidade de controle", "Kit de manutenção"][id - 1], produto_id: `SKU-00${id}`, codigo_qr: `QA-${id}`, quantidade: id * 12, fragil: id === 1 ? "Sim" : "Não", local_lido: `Corredor A · posição 0${id}`, setor: "Recebimento", operador: "Operador de teste", status: "lido", criado_em: new Date().toISOString() }));
