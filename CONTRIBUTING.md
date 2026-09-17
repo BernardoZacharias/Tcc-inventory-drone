@@ -110,11 +110,16 @@ e avise o outro.
 **Não commite `node_modules/` nem `dist/`.** Já estão ignorados — se aparecerem
 no `git status`, algo está errado, avise antes de commitar.
 
-**Rode o lint antes de abrir o PR:**
+**Rode o lint e os testes antes de abrir o PR:**
 
 ```bash
-cd frontend && npm run lint
+cd frontend           && npm run lint && npm test
+cd gestock-drone-agent && .venv/Scripts/python tests/test_qr.py
 ```
+
+Os testes do Agent rodam sem drone e sem câmera. Se você mexeu no
+leitor de QR, eles são a única coisa que separa "funciona aqui" de
+"funciona na apresentação" — veja [docs/TESTES.md](docs/TESTES.md).
 
 ---
 

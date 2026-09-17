@@ -15,9 +15,11 @@ labels: bug
 
 ## Onde
 
-- [ ] frontend
-- [ ] api-node
-- [ ] vision-python
+- [ ] frontend (painel web)
+- [ ] api-node (API)
+- [ ] gestock-drone-agent (Agent do drone)
+- [ ] desktop (aplicativo instalável)
+- [ ] vision-python (scanner de tela)
 - [ ] banco de dados
 
 ## Print / mensagem de erro

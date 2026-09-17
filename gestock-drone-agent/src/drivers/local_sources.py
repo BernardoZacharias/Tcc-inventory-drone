@@ -136,15 +136,31 @@ class SyntheticDriver(BaseDroneDriver):
         )
 
     def _montar_qr(self) -> Optional[Any]:
+        """
+        Desenha o QR. Se não der, AVISA — não falha calado.
+
+        Falhar em silêncio aqui é perigoso: a fonte desenha um retângulo
+        no lugar do QR, o Agent roda liso e o operador vê "0 lidos". Ele
+        conclui que o leitor está quebrado quando, na verdade, nunca
+        houve QR na imagem para ler. O caso comum é o `qrcode` instalado
+        sem o Pillow (`qrcode` em vez de `qrcode[pil]`).
+        """
         try:
             import cv2
             import numpy as np
-            import qrcode  # opcional
+            import qrcode
 
             img = qrcode.make(self.payload).convert("RGB")
             arr = np.array(img)
             return cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
-        except Exception:  # noqa: BLE001 - qrcode é opcional
+        except Exception as exc:  # noqa: BLE001 - a fonte ainda serve sem QR
+            log.warning(
+                "A fonte sintética não conseguiu desenhar o QR (%s: %s). "
+                "Vai gerar só um alvo geométrico, então a leitura de QR "
+                "ficará em zero. Instale as dependências completas: "
+                "pip install -r requirements.txt",
+                type(exc).__name__, exc,
+            )
             return None
 
     def connect(self) -> bool:

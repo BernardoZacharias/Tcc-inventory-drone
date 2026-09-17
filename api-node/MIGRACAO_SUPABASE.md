@@ -65,7 +65,7 @@ A `DATABASE_URL` do `.env` já está configurada com o pooler correto
 | admin@gestock.com.br | 123456 | admin (vê todas as empresas) |
 | vanderlei@gestock.com.br | 123456 | operador (só a Empresa Alpha) |
 
-## Segurança — pendências (ver `../PROXIMOS_PASSOS.md`)
+## Segurança — pendências (ver `../docs/PROXIMOS_PASSOS.md`)
 
 A migração **não** alterou as questões de segurança já mapeadas:
 senha em texto puro, rotas sem `authMiddleware` e filtro por empresa

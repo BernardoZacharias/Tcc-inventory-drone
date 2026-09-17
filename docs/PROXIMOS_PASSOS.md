@@ -1,7 +1,11 @@
 # 🚁 Gestock Drone — Revisão do Projeto e Próximos Passos
 
-> Documento de roadmap gerado a partir de uma revisão completa do repositório.
-> Data da revisão: **08/07/2026**.
+> Roadmap do projeto. Revisão original em **08/07/2026**, atualizado em
+> **17/09/2026**.
+>
+> Os itens ✅ foram resolvidos depois da revisão original e ficam aqui
+> como registro do que mudou. Os itens 🔴 **continuam abertos** e foram
+> reconferidos no código — não são alarme falso.
 
 ---
 
@@ -13,13 +17,18 @@ captura QR Codes de produtos nas prateleiras; cada leitura é enviada para uma A
 armazena de forma estruturada e a disponibiliza em um painel web com métricas, empresas,
 operadores, operações, relatórios e alertas.
 
-É um projeto **full-stack de TCC**, dividido em três módulos independentes:
+É um projeto **full-stack de TCC**, hoje dividido em **cinco** módulos:
 
 | Módulo | Pasta | Stack | Papel |
 |--------|-------|-------|-------|
-| **Frontend** | `frontend/` | React 19 + Vite 8 + framer-motion + lucide-react | Painel web (SPA). Deploy no Vercel. |
-| **Backend / API** | `api-node/` | Node.js + Express 5 + MySQL2 + JWT + bcryptjs | API REST + orquestra o scanner Python. |
-| **Visão computacional** | `vision-python/` | Python + OpenCV + pyzbar + mss + requests | Captura a tela, detecta QR Codes e envia leituras à API. |
+| **Frontend** | `frontend/` | React 19 + Vite 8 + Tailwind 4 + framer-motion | Painel web (SPA). Deploy no Vercel. |
+| **Backend / API** | `api-node/` | Node.js + Express 5 + PostgreSQL (`pg`) + JWT | API REST + orquestra o scanner Python. |
+| **Agent do drone** | `gestock-drone-agent/` | Python + OpenCV + pyzbar | Fala direto com o drone (RTSP) e lê os QR na borda. |
+| **Aplicativo** | `desktop/` | Electron | Empacota painel + API + Agent num instalável. |
+| **Scanner de tela** | `vision-python/` | Python + OpenCV + pyzbar + mss | Protótipo original por captura de tela; ainda usado pelo site. |
+
+> Os dois últimos módulos não existiam na revisão original. O banco
+> também mudou: **MySQL → PostgreSQL (Supabase)**.
 
 ### Como os módulos conversam
 
@@ -31,8 +40,8 @@ operadores, operações, relatórios e alertas.
                                                 │                                        │
                                                 ▼                                        │
                                          ┌──────────────┐        POST /api/leituras      │
-                                         │  MySQL        │  ◀─────────────────────────────┘
-                                         │ gestock_drone │
+                                         │  PostgreSQL  │  ◀─────────────────────────────┘
+                                         │  (Supabase)  │
                                          └──────────────┘
 ```
 
@@ -43,7 +52,7 @@ operadores, operações, relatórios e alertas.
 4. A cada QR novo (com *cooldown* de 5s) ele faz `POST /api/leituras` para a API.
 5. O frontend lê `/api/leituras`, `/api/stats`, etc. e monta o dashboard.
 
-### Modelo de dados (`api-node/schema.sql`)
+### Modelo de dados (`api-node/schema.postgres.sql`)
 
 `usuarios`, `empresas`, `setores`, `operadores`, `leituras`, `operacoes`, `relatorios`,
 `alertas`, `drones` — com escopo por empresa (usuário `admin` vê tudo; `operador` só vê a
@@ -76,6 +85,12 @@ própria empresa, aplicado no frontend em `api.js`).
 
 ### 🔴 PRIORIDADE CRÍTICA — Segurança
 
+> **Reconferido em 17/09/2026: os quatro itens abaixo continuam abertos.**
+> `bcrypt` não aparece em lugar nenhum de `api-node/src/`, só
+> `leitura.routes.js` usa `authMiddleware`, o `cors()` segue sem origem
+> e o `error.middleware.js` nunca é registrado. É o que uma banca
+> pergunta primeiro — vale atacar antes de qualquer funcionalidade nova.
+
 1. **Senhas em texto puro.** `api-node/src/services/auth.service.js` grava a senha sem hash
    (`INSERT ... senha`) e compara com `senha !== usuario.senha`. O pacote `bcryptjs` já está
    instalado mas **nunca é usado**.
@@ -103,11 +118,15 @@ própria empresa, aplicado no frontend em `api.js`).
 
 ### 🟠 PRIORIDADE ALTA — Correções que impedem o projeto de rodar do zero
 
-6. **`api-node/schema.sql` está 100% comentado.** Todas as linhas começam com `--`, então
+6. ✅ **RESOLVIDO — `schema.sql` comentado.** Hoje o arquivo executável é
+   `schema.postgres.sql`, idempotente e com dados de exemplo.
+   ~~Texto original:~~ **`api-node/schema.sql` está 100% comentado.** Todas as linhas começam com `--`, então
    executá-lo **não cria nada**. Um dev novo não consegue montar o banco.
    → Remover os comentários das linhas de DDL/seed (ou deixar só o cabeçalho comentado).
 
-7. **`vision-python/requirements.txt` está vazio.** As dependências não estão declaradas.
+7. ✅ **RESOLVIDO — requirements vazio.** Declarado em `vision-python/` e em
+   `gestock-drone-agent/`.
+   ~~Texto original:~~ **`vision-python/requirements.txt` está vazio.** As dependências não estão declaradas.
    → Preencher (com base nos `import` de `main.py`):
    ```
    opencv-python
@@ -118,7 +137,9 @@ própria empresa, aplicado no frontend em `api.js`).
    ```
    Observação: `pyzbar` exige a lib nativa **ZBar** instalada no sistema operacional.
 
-8. **API_URL fixa em `localhost`.** Tanto `frontend/src/services/api.js`
+8. ✅ **RESOLVIDO — API_URL fixa.** O frontend resolve a URL em tempo de
+   execução (`getApiUrl()`), servindo web e aplicativo.
+   ~~Texto original:~~ **API_URL fixa em `localhost`.** Tanto `frontend/src/services/api.js`
    (`http://localhost:3000/api`) quanto `vision-python/src/main.py` apontam para localhost.
    Por isso o site publicado no Vercel **não fala com o backend**.
    → Frontend: usar `import.meta.env.VITE_API_URL` (arquivo `.env` do Vite).
@@ -130,7 +151,9 @@ própria empresa, aplicado no frontend em `api.js`).
    tratados de forma central.
    → Adicionar `app.use(errorMiddleware)` **depois** das rotas.
 
-10. **Código morto.** `frontend/src/services/localStore.js` (modo demo por localStorage)
+10. ✅ **RESOLVIDO — código morto.** `localStore.js` foi reintegrado como
+    modo de demonstração.
+    ~~Texto original:~~ **Código morto.** `frontend/src/services/localStore.js` (modo demo por localStorage)
     ficou órfão — o cabeçalho de `api.js` afirma que o modo demonstração foi removido.
     → Remover o arquivo, ou reintegrá-lo intencionalmente como fallback offline.
 
@@ -149,13 +172,19 @@ própria empresa, aplicado no frontend em `api.js`).
 
 ### 🟢 PRIORIDADE BAIXA — Melhorias e evolução
 
-14. **README de verdade.** O `README.md` da raiz tem só 2 linhas. Documentar: o que é o
+14. ✅ **RESOLVIDO — README.** Raiz, Agent e aplicativo documentados; veja
+    também `docs/TESTES.md`.
+    ~~Texto original:~~ **README de verdade.** O `README.md` da raiz tem só 2 linhas. Documentar: o que é o
     projeto, pré-requisitos e passo a passo para rodar os 3 módulos (com o `.env.example`).
-15. **Testes automatizados** (Jest/Vitest no front, Jest/supertest na API) — hoje não há nenhum.
+15. 🟡 **PARCIAL — testes.** Hoje: 23 no frontend (`npm test`) e 31 no Agent.
+    Falta a API.
+    ~~Texto original:~~ **Testes automatizados** (Jest/Vitest no front, Jest/supertest na API) — hoje não há nenhum.
 16. **CI** (GitHub Actions): lint + build + testes em cada push.
 17. **Validação de entrada** no backend (ex.: `zod`/`express-validator`) — hoje as rotas
     confiam no corpo recebido.
-18. **Fonte de vídeo real.** O `vision-python` captura a **tela** (`mss`), não a câmera do
+18. ✅ **RESOLVIDO — fonte de vídeo real.** O `gestock-drone-agent` lê RTSP
+    direto do drone, com reconexão automática.
+    ~~Texto original:~~ **Fonte de vídeo real.** O `vision-python` captura a **tela** (`mss`), não a câmera do
     drone — é um protótipo. Evoluir para RTSP / webcam / feed do drone.
 19. **Feedback de "backend offline".** `api.js` já expõe `backendStatus()`; garantir que o
     componente `BackendBadge` mostre isso de forma clara em todas as telas.
@@ -173,5 +202,22 @@ própria empresa, aplicado no frontend em `api.js`).
 
 ---
 
-*Documento gerado durante a revisão do repositório. Sinta-se à vontade para editar as
-prioridades conforme os prazos do TCC.*
+## 5. Os marcos do Agent
+
+O `gestock-drone-agent` tem roadmap próprio, em cinco marcos:
+
+| # | O quê | Situação |
+|---|-------|----------|
+| 1 | Conexão, vídeo, reconexão automática | ✅ feito |
+| 2 | QR Engine (confirmação + deduplicação) | ✅ feito |
+| 3 | SQLite local + fila offline | ⬜ a fazer |
+| 4 | Sincronismo com a nuvem | ⬜ depende de contratar uma VPS |
+| 5 | Empacotar como `.exe` | ⬜ a fazer |
+
+O marco 3 é o próximo e o mais importante: na Wi-Fi do drone o notebook
+**não tem internet**, então a leitura precisa ser gravada localmente e
+sincronizada depois.
+
+---
+
+*Documento vivo. Edite as prioridades conforme os prazos do TCC.*

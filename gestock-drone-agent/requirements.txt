@@ -25,4 +25,9 @@ pyzbar>=0.1.9
 
 # Desenha um QR de verdade na fonte sintética. Usado nos testes de
 # ponta a ponta e para demonstrar o Agent sem drone e sem câmera.
-qrcode>=7.4
+#
+# Tem que ser qrcode[pil]: sem o Pillow o qrcode instala, importa e
+# falha só na hora de gerar a imagem. A fonte sintética então desenha
+# um retângulo no lugar do QR e a leitura fica em zero, parecendo
+# defeito do leitor.
+qrcode[pil]>=7.4
