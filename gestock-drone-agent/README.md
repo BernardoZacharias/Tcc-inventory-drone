@@ -3,10 +3,11 @@
 Agente local que conversa com o drone, processa o vídeo **na borda** e
 (mais tarde) sincroniza só os resultados com a nuvem.
 
-> **Marco atual: 1 de 5 — conexão e vídeo.**
-> Faz: conectar → receber frames → monitorar → reconectar sozinho.
-> Ainda não faz: QR, SQLite, API, WebSocket. É proposital — stream
-> instável estraga qualquer coisa construída em cima.
+> **Marco atual: 2 de 5 — conexão, vídeo e leitura de QR.**
+> Faz: conectar → receber frames → monitorar → reconectar sozinho →
+> ler QR Codes com confirmação e sem repetição.
+> Ainda não faz: SQLite, API, WebSocket. As leituras saem no terminal.
+> É proposital — gravar leitura errada é pior que não gravar nada.
 
 ---
 
@@ -162,17 +163,74 @@ de casa). Reconecte na `FLOW-UFO_*` e tente de novo.
 
 ---
 
+## Leitura de QR (marco 2)
+
+```bash
+# com o drone
+python -m src.main --driver flow-ufo --qr
+
+# sem drone nenhum, para ver funcionando
+python -m src.main --driver synthetic --qr --headless --duration 10
+```
+
+Cada leitura confirmada aparece assim:
+
+```
+[QR CLAHE] Teclado Logitech | 50 un | Corredor A - Prateleira 3
+```
+
+E o rodapé de status ganha três números:
+
+```
+lidos=12   repetidos=430   analisados=641
+```
+
+`repetidos` alto é **sinal de saúde**, não de problema: quer dizer que a
+mesma etiqueta ficou no enquadramento e o motor não a contou duas vezes.
+
+### As duas regras que fazem a leitura ser confiável
+
+**1. Confirmação em múltiplos quadros.** Um código só vale depois de
+aparecer em 2 dos últimos 4 quadros. Decodificação isolada erra: um
+reflexo na etiqueta, o borrão do drone se movendo ou meio QR entrando no
+enquadramento produzem leitura fantasma. Esperar a repetição custa
+décimos de segundo e elimina isso. Ajuste com `--qr-confirmacoes`.
+
+**2. Deduplicação por sessão.** Cada código é contado **uma vez**. O
+código antigo guardava apenas o último QR lido — lendo A, depois B,
+depois A de novo, o segundo A era reenviado e o inventário dobrava. Aqui
+as repetições viram contador.
+
+### A armadilha do acento
+
+A norma do QR Code manda interpretar o modo byte como **Shift-JIS**
+quando o código não traz o marcador ECI. O zbar obedece à letra. Como
+nossos QR trazem `Frágil: Não` em UTF-8 sem ECI, o texto voltava como
+katakana japonês.
+
+O motor desfaz isso (`texto_do_qr`), e há teste fixando o comportamento.
+Se um dia alguém trocar o gerador de QR, esse teste avisa.
+
+---
+
 ## Testes
 
 Rodam em qualquer máquina, sem drone e sem câmera:
 
 ```bash
-python tests/test_engine.py
+python tests/test_engine.py     # marco 1 — vídeo
+python tests/test_qr.py         # marco 2 — leitura
 ```
 
-Provam que o engine entrega frames, **sempre entrega o mais recente**,
-reconecta sozinho quando a fonte cai, e sinaliza `ERRO` quando ela não
-volta.
+O primeiro prova que o engine entrega frames, **sempre entrega o mais
+recente**, reconecta sozinho quando a fonte cai e sinaliza `ERRO` quando
+ela não volta.
+
+O segundo prova que um código **não** é aceito com uma aparição só, que
+o mesmo código conta **uma vez por sessão**, e que um QR de verdade —
+renderizado numa imagem de verdade, inclusive escura e borrada — é lido.
+Esse último importa: sem ele, os testes passariam numa máquina onde a
+decodificação está quebrada.
 
 ---
 
@@ -183,7 +241,14 @@ volta.
 | `--driver` | `flow-ufo` | `flow-ufo`, `rtsp`, `usb`, `file`, `synthetic` |
 | `--source` | — | URL, arquivo ou índice da webcam |
 | `--ip` / `--port` / `--path` | `192.168.1.1` / `7070` / `/webcam` | endereço do drone |
-| `--transport` | `tcp` | `tcp` ou `udp` (TCP costuma ser mais estável em Wi-Fi) |
+| `--transport` | `auto` | `auto`, `tcp` ou `udp`. **Não mude sem precisar**: o FLOW-UFO responde `461 Unsupported Transport` quando o transporte é imposto |
+| `--backend` | `opencv` | `ffmpeg` decodifica pelo ffmpeg do sistema, quando o OpenCV quebra |
+| `--qr` | — | liga a leitura de QR Codes |
+| `--qr-confirmacoes` | `2` | quantos quadros precisam ver o mesmo código |
+| `--qr-janela` | `4` | em quantos quadros recentes procurar as confirmações |
+| `--qr-fps` | `12` | quantos quadros por segundo analisar |
+| `--qr-upscale` | `1.0` | amplia antes de decodificar (use `2` para etiqueta pequena/longe) |
+| `--qr-recorte` | `0` | ignora as bordas (ex.: `0.15` foca no centro) |
 | `--stall-timeout` | `5` | segundos sem frame válido até reconectar |
 | `--max-reconnects` | `0` | `0` = tenta para sempre |
 | `--headless` | — | não abre janela |
@@ -244,7 +309,7 @@ STREAM_ATIVO → CONEXAO_PERDIDA → RECONECTANDO → STREAM_ATIVO
 | # | O quê | Situação |
 |---|-------|----------|
 | 1 | Conexão, vídeo, reconexão | ✅ feito |
-| 2 | QR Engine + deduplicação | a fazer |
+| 2 | QR Engine + deduplicação | ✅ feito |
 | 3 | SQLite local + fila offline | a fazer |
 | 4 | CloudClient (HTTP → depois WebSocket) | a fazer |
 | 5 | Empacotar `.exe` para Windows | a fazer |

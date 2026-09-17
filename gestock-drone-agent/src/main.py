@@ -1,26 +1,28 @@
 """
-main.py — Gestock Drone Agent (marco 1)
+main.py — Gestock Drone Agent (marcos 1 e 2)
 
-Escopo deste marco, de propósito pequeno:
+    conectar → receber frames → monitorar → reconectar sozinho   (marco 1)
+    ler QR Codes com confirmação e sem repetição                 (marco 2)
 
-    conectar → receber frames → monitorar → reconectar sozinho
-
-Ainda NÃO faz: leitura de QR, banco, API, nuvem. Isso entra depois que
-esta camada estiver sólida — stream instável estraga qualquer coisa
-construída em cima.
+Ainda NÃO faz: banco local, API, nuvem. As leituras saem no terminal.
+Ligar isso no estoque é o marco 3 — e só depois que a leitura estiver
+confiável, porque leitura errada gravada é pior que leitura nenhuma.
 
 Exemplos:
 
-    # drone real (notebook na Wi-Fi FLOW-UFO)
-    python -m src.main --driver flow-ufo
+    # drone real (notebook na Wi-Fi FLOW-UFO), lendo QR
+    python -m src.main --driver flow-ufo --qr
 
     # sem janela (servidor / teste), só métricas no terminal
-    python -m src.main --driver flow-ufo --headless
+    python -m src.main --driver flow-ufo --headless --qr
 
     # sem drone, para validar o Agent em qualquer máquina
-    python -m src.main --driver synthetic
+    python -m src.main --driver synthetic --qr
     python -m src.main --driver usb
-    python -m src.main --driver file --source voo.mp4
+    python -m src.main --driver file --source voo.mp4 --qr
+
+    # etiqueta pequena e longe: amplia antes de decodificar
+    python -m src.main --driver flow-ufo --qr --qr-upscale 2
 
     # qualquer outra câmera RTSP
     python -m src.main --driver rtsp --source rtsp://192.168.1.1:7070/webcam
@@ -43,12 +45,30 @@ if __package__ in (None, ""):
     from src.core.states import AgentState, StateMachine
     from src.drivers import build_driver
     from src.video.engine import VideoEngine
+    from src.vision.qr_reader import QrEngine
 else:
     from .core.states import AgentState, StateMachine
     from .drivers import build_driver
     from .video.engine import VideoEngine
+    from .vision.qr_reader import QrEngine
 
 log = logging.getLogger("agent")
+
+
+def saida_utf8() -> None:
+    """
+    Windows: quando a saída vai para um pipe (é assim que o aplicativo
+    Electron lê o Agent) o Python usa cp1252, e "conexão" vira "conex?o".
+    Fixar UTF-8 resolve nos dois casos; errors="replace" garante que um
+    caractere exótico vindo de um QR nunca derrube o processo.
+
+    Precisa rodar antes do argparse, senão o próprio `--help` sai torto.
+    """
+    for fluxo in (sys.stdout, sys.stderr):
+        try:
+            fluxo.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:  # noqa: BLE001 - fluxo já substituído/redirecionado
+            pass
 
 
 def configurar_log(verboso: bool) -> None:
@@ -92,21 +112,29 @@ def montar_driver(args: argparse.Namespace):
     return build_driver("synthetic")
 
 
-def linha_status(machine: StateMachine, engine: VideoEngine) -> str:
+def linha_status(machine: StateMachine, engine: VideoEngine,
+                 qr: Optional[QrEngine] = None) -> str:
     s = engine.stats.resumo()
     estado = machine.state
     marca = "OK " if estado.saudavel else "..."
     idade = s["idade_frame_s"]
-    return (
+    linha = (
         f"[{marca}] {estado.rotulo:<22} "
         f"fps={s['fps']:<5} recebidos={s['recebidos']:<6} "
         f"descartados={s['descartados']:<5} falhas={s['falhas']:<5} "
         f"reconexoes={s['reconexoes']:<3} "
         f"idade={idade if idade is not None else '-'}s"
     )
+    if qr is not None:
+        q = qr.stats.resumo()
+        linha += (f"  |  lidos={q['leituras']:<4} "
+                  f"repetidos={q['duplicados']:<5} analisados={q['quadros']}")
+    return linha
 
 
 def main(argv: Optional[list] = None) -> int:
+    saida_utf8()
+
     p = argparse.ArgumentParser(
         prog="gestock-drone-agent",
         description="Agent local do Gestock Drone — conexão e vídeo (marco 1).",
@@ -130,6 +158,27 @@ def main(argv: Optional[list] = None) -> int:
     p.add_argument("--fps", type=int,
                    help="teto de quadros por segundo (backend ffmpeg). "
                         "Para ler QR, 15-30 sobra")
+    # ── leitura de QR (marco 2) ──────────────────────────────────
+    p.add_argument("--qr", action="store_true",
+                   help="ligar a leitura de QR Codes")
+    p.add_argument("--qr-confirmacoes", type=int, default=2, metavar="N",
+                   help="quantos quadros precisam ver o mesmo código para "
+                        "ele valer (padrão: 2). 1 aceita leitura isolada e "
+                        "volta a errar com reflexo e borrão")
+    p.add_argument("--qr-janela", type=int, default=4, metavar="M",
+                   help="em quantos quadros recentes procurar essas "
+                        "confirmações (padrão: 4)")
+    p.add_argument("--qr-fps", type=float, default=12.0, metavar="F",
+                   help="quantos quadros por segundo analisar (padrão: 12). "
+                        "Analisar todos os 25 só gasta CPU: a etiqueta fica "
+                        "vários quadros no enquadramento")
+    p.add_argument("--qr-upscale", type=float, default=1.0, metavar="X",
+                   help="amplia o quadro antes de decodificar. Use 2 quando "
+                        "a etiqueta estiver pequena ou longe")
+    p.add_argument("--qr-recorte", type=float, default=0.0, metavar="P",
+                   help="ignora esta fração das bordas (ex.: 0.15). Foca no "
+                        "centro do quadro e acelera a análise")
+
     p.add_argument("--stall-timeout", type=float, default=5.0,
                    help="segundos sem frame válido até reconectar")
     p.add_argument("--max-reconnects", type=int, default=0,
@@ -152,8 +201,24 @@ def main(argv: Optional[list] = None) -> int:
         machine=machine,
     )
 
-    log.info("Gestock Drone Agent — marco 1 (conexão e vídeo)")
+    qr: Optional[QrEngine] = None
+    if args.qr:
+        try:
+            qr = QrEngine(
+                confirmacoes=args.qr_confirmacoes,
+                janela=args.qr_janela,
+                upscale=args.qr_upscale,
+                recorte=args.qr_recorte,
+            )
+        except ValueError as exc:
+            raise SystemExit(f"Configuração de QR inválida: {exc}")
+
+    log.info("Gestock Drone Agent — conexão, vídeo e leitura de QR")
     log.info("Equipamento: %s", driver.describe())
+    if qr is not None:
+        log.info("Leitura de QR ligada: %d confirmação(ões) em %d quadros, "
+                 "analisando até %.0f quadros/s",
+                 qr.confirmacoes, qr.janela, args.qr_fps)
 
     encerrar = {"pedido": False}
 
@@ -182,6 +247,9 @@ def main(argv: Optional[list] = None) -> int:
 
     inicio = time.monotonic()
     ultimo_print = 0.0
+    ultima_analise = 0.0
+    intervalo_qr = 1.0 / args.qr_fps if args.qr_fps > 0 else 0.0
+    avisou_sem_numpy = False
     codigo = 0
 
     try:
@@ -196,19 +264,39 @@ def main(argv: Optional[list] = None) -> int:
                 break
 
             ok, frame = engine.latest_novo()
+            # RawFrame (sem numpy) não serve nem para imshow nem para QR
+            utilizavel = ok and hasattr(frame, "dtype")
 
-            # RawFrame (sem numpy) nao pode ir para o imshow
-            if ok and mostrar and cv2 is not None and hasattr(frame, "dtype"):
+            # ── leitura de QR ────────────────────────────────────
+            agora = time.monotonic()
+            if qr is not None and ok:
+                if not utilizavel:
+                    if not avisou_sem_numpy:
+                        avisou_sem_numpy = True
+                        log.error("Sem numpy utilizável nesta máquina: o vídeo "
+                                  "funciona, mas não dá para ler QR. Rode "
+                                  "`python -m src.doctor` para o diagnóstico.")
+                elif agora - ultima_analise >= intervalo_qr:
+                    ultima_analise = agora
+                    if machine.state is AgentState.STREAM_ATIVO:
+                        machine.to(AgentState.LEITURA_ATIVA, "QR ligado")
+                    try:
+                        for leitura in qr.processar(frame):
+                            log.info("[QR %s] %s", leitura.estrategia,
+                                     leitura.dados.resumo())
+                    except Exception as exc:  # noqa: BLE001 - visão não derruba o voo
+                        log.warning("Falha ao analisar o quadro: %s", exc)
+
+            if utilizavel and mostrar and cv2 is not None:
                 cv2.imshow(janela, frame)
                 if (cv2.waitKey(1) & 0xFF) == 27:  # ESC
                     break
             elif not ok:
                 time.sleep(0.005)
 
-            agora = time.monotonic()
             if agora - ultimo_print >= 1.0:
                 ultimo_print = agora
-                print(linha_status(machine, engine), flush=True)
+                print(linha_status(machine, engine, qr), flush=True)
     finally:
         engine.stop()
         if mostrar and cv2 is not None:
@@ -219,9 +307,20 @@ def main(argv: Optional[list] = None) -> int:
 
     s = engine.stats.resumo()
     log.info(
-        "Resumo: %s frames em %.0fs · %s descartados · %s falhas · %s reconexões",
+        "Resumo: %s frames em %.0fs | %s descartados | %s falhas | %s reconexões",
         s["recebidos"], s["uptime_s"], s["descartados"], s["falhas"], s["reconexoes"],
     )
+
+    if qr is not None:
+        q = qr.stats.resumo()
+        log.info("Leitura: %s código(s) único(s) em %s quadros analisados "
+                 "(%s repetições ignoradas)",
+                 q["leituras"], q["quadros"], q["duplicados"])
+        for leitura in qr.leituras():
+            repetida = qr.repeticoes(leitura.codigo)
+            log.info("  - %s%s", leitura.dados.resumo(),
+                     f"  (visto +{repetida}x)" if repetida else "")
+
     return codigo
 
 

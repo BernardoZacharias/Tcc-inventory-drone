@@ -1,4 +1,4 @@
-# Gestock Drone Agent — marco 1 (conexão e vídeo)
+# Gestock Drone Agent — marcos 1 e 2 (vídeo e leitura de QR)
 #
 #   pip install -r requirements.txt
 #
@@ -17,6 +17,12 @@
 opencv-python>=4.9,<5
 numpy>=1.26,<3
 
-# Opcional: só para a fonte sintética desenhar um QR de verdade
-# (usada em teste, dispensável para operar o drone).
+# Leitura de QR. O pyzbar depende da biblioteca nativa ZBar:
+#   Windows: já vem junto no pacote (não precisa instalar nada)
+#   Linux:   sudo apt install libzbar0   /   sudo pacman -S zbar
+#   macOS:   brew install zbar
+pyzbar>=0.1.9
+
+# Desenha um QR de verdade na fonte sintética. Usado nos testes de
+# ponta a ponta e para demonstrar o Agent sem drone e sem câmera.
 qrcode>=7.4
