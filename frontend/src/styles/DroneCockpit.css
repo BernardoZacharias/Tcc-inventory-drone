@@ -1,0 +1,444 @@
+/*
+ * DroneCockpit.css — a tela de voo.
+ *
+ * Cores FIXAS, fora do sistema de temas. O conteúdo principal é imagem
+ * de câmera: no tema claro, um fundo branco em volta do vídeo cansa a
+ * vista e falseia as cores do que está sendo inspecionado. Mesma
+ * decisão da cena do galpão na tela de acesso — quando o assunto é
+ * ambiente, a cor é do ambiente, não do tema.
+ *
+ * Reaproveita os tokens de raio e curva do sistema para que o formato
+ * continue igual ao resto do produto.
+ */
+
+.dc-tela {
+  --dc-fundo: #05070c;
+  --dc-superficie: rgba(14, 20, 32, 0.88);
+  --dc-linha: rgba(120, 160, 200, 0.16);
+  --dc-texto: #e8eef7;
+  --dc-fraco: rgba(200, 216, 236, 0.58);
+  --dc-ciano: #22d3ee;
+  --dc-ambar: #fbbf24;
+
+  position: fixed;
+  inset: 0;
+  z-index: 200;               /* acima do painel, abaixo dos toasts */
+  display: flex;
+  flex-direction: column;
+  background: var(--dc-fundo);
+  color: var(--dc-texto);
+  overflow: hidden;
+}
+
+/* ── Barra superior ────────────────────────────────────────── */
+.dc-topo {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--dc-linha);
+  background: linear-gradient(to bottom, rgba(10, 14, 22, 0.96), rgba(10, 14, 22, 0.72));
+  flex-wrap: wrap;
+}
+
+.dc-identidade {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.dc-identidade strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.dc-identidade small {
+  display: block;
+  margin-top: 2px;
+  color: var(--dc-fraco);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* O ponto que diz "está vivo" sem precisar de texto. */
+.dc-pulso {
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  background: var(--dc-ambar);
+  box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.5);
+}
+
+.dc-pulso.vivo {
+  background: var(--dc-ciano);
+  animation: dc-bater 2s ease-out infinite;
+}
+
+@keyframes dc-bater {
+  0%   { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.45); }
+  70%  { box-shadow: 0 0 0 10px rgba(34, 211, 238, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
+}
+
+.dc-metricas {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dc-metrica {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 1px solid var(--dc-linha);
+  border-radius: var(--radius-xs);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 11.5px;
+  color: var(--dc-fraco);
+}
+
+.dc-metrica svg { opacity: 0.55; }
+
+.dc-metrica strong {
+  color: var(--dc-texto);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dc-metrica.destaque {
+  border-color: rgba(34, 211, 238, 0.35);
+  background: rgba(34, 211, 238, 0.08);
+}
+.dc-metrica.destaque strong,
+.dc-metrica.destaque svg { color: var(--dc-ciano); opacity: 1; }
+
+.dc-fechar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: 1px solid rgba(248, 113, 113, 0.32);
+  border-radius: var(--radius-xs);
+  background: rgba(248, 113, 113, 0.1);
+  color: #fca5a5;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+
+.dc-fechar:hover {
+  background: rgba(248, 113, 113, 0.18);
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+.dc-fechar:focus-visible {
+  outline: 2px solid #fca5a5;
+  outline-offset: 2px;
+}
+
+/* ── Palco: vídeo + leituras ───────────────────────────────── */
+.dc-palco {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  min-height: 0;
+}
+
+.dc-visor {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px;
+  background:
+    radial-gradient(ellipse at center, rgba(34, 211, 238, 0.05), transparent 65%),
+    #04060a;
+}
+
+/* Preenche o visor sem cortar nem distorcer. Deixar no tamanho
+   natural sobraria preto em volta, e quem está inspecionando uma
+   prateleira quer a maior imagem possível. */
+.dc-visor img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 320ms var(--ease-out);
+}
+
+.dc-visor img.pronto { opacity: 1; }
+
+/* Moldura de visor de câmera */
+.dc-moldura {
+  position: absolute;
+  inset: 20px;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+}
+
+.dc-canto {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 2px solid rgba(34, 211, 238, 0.5);
+}
+.dc-canto.no { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+.dc-canto.ne { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+.dc-canto.so { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+.dc-canto.se { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+.dc-varredura {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--dc-ciano), transparent);
+  opacity: 0.5;
+  animation: dc-varrer 3.6s ease-in-out infinite;
+}
+
+@keyframes dc-varrer {
+  0%, 100% { top: 4%; }
+  50%      { top: 96%; }
+}
+
+/* ── Estados: esperando e erro ─────────────────────────────── */
+.dc-esperando,
+.dc-erro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+  text-align: center;
+  background: rgba(5, 7, 12, 0.9);
+}
+
+.dc-esperando svg { color: var(--dc-ciano); opacity: 0.8; }
+.dc-erro svg      { color: #fca5a5; }
+
+.dc-esperando strong,
+.dc-erro strong { font-size: 15px; font-weight: 600; }
+
+.dc-esperando p,
+.dc-erro p {
+  max-width: 44ch;
+  margin: 0;
+  color: var(--dc-fraco);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.dc-esperando code {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(34, 211, 238, 0.12);
+  color: var(--dc-ciano);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.dc-girando { animation: dc-rodar 1.1s linear infinite; }
+@keyframes dc-rodar { to { transform: rotate(360deg); } }
+
+.dc-erro details {
+  margin-top: 6px;
+  max-width: 62ch;
+  width: 100%;
+  text-align: left;
+}
+
+.dc-erro summary {
+  color: var(--dc-fraco);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dc-erro pre {
+  margin-top: 8px;
+  max-height: 180px;
+  padding: 12px;
+  border: 1px solid var(--dc-linha);
+  border-radius: var(--radius-xs);
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--dc-fraco);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+/* ── Painel de leituras ────────────────────────────────────── */
+.dc-leituras {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--dc-linha);
+  background: var(--dc-superficie);
+}
+
+.dc-leituras > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--dc-linha);
+}
+
+.dc-leituras > header svg { color: var(--dc-ciano); opacity: 0.7; }
+
+.dc-leituras h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dc-fraco);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-contador {
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  background: rgba(34, 211, 238, 0.14);
+  color: var(--dc-ciano);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dc-lista {
+  flex: 1;
+  min-height: 0;
+  padding: 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dc-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--dc-linha);
+  border-radius: var(--radius-xs);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.dc-mira {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: rgba(34, 211, 238, 0.12);
+  color: var(--dc-ciano);
+}
+
+.dc-dados { flex: 1; min-width: 0; }
+
+.dc-dados strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.dc-detalhes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+}
+
+.dc-detalhes span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--dc-fraco);
+  font-size: 11.5px;
+}
+
+.dc-detalhes .dc-fragil { color: var(--dc-ambar); }
+
+.dc-cru {
+  display: block;
+  margin-top: 6px;
+  color: var(--dc-fraco);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  word-break: break-all;
+}
+
+.dc-tag {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--dc-fraco);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+}
+
+.dc-vazio {
+  margin: auto;
+  padding: 24px 16px;
+  color: var(--dc-fraco);
+  font-size: 12.5px;
+  line-height: 1.65;
+  text-align: center;
+}
+
+.dc-vazio strong { color: var(--dc-ciano); font-weight: 600; }
+
+.dc-aviso {
+  padding: 11px 14px;
+  border-top: 1px solid var(--dc-linha);
+  background: rgba(251, 191, 36, 0.07);
+  color: rgba(251, 191, 36, 0.86);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+/* ── Telas estreitas ───────────────────────────────────────── */
+@media (max-width: 900px) {
+  .dc-palco {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 40%);
+  }
+  .dc-leituras {
+    border-left: 0;
+    border-top: 1px solid var(--dc-linha);
+  }
+  .dc-metricas { order: 3; width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dc-varredura,
+  .dc-pulso.vivo,
+  .dc-girando { animation: none; }
+}

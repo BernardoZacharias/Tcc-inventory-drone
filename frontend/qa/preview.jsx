@@ -10,6 +10,7 @@ import Operators from "../src/pages/Operators";
 import Readings from "../src/pages/Readings";
 import ReadingPanel from "../src/pages/ReadingPanel";
 import CompanyPanel from "../src/pages/CompanyPanel";
+import CockpitPreview from "./CockpitPreview";
 import Login from "../src/pages/Login";
 import ThemeToggle from "../src/components/ThemeToggle";
 import ToastHub from "../src/components/Toast";
@@ -20,7 +21,7 @@ import "../src/styles/polish.css";
 import "../src/styles/MarketingFlow.css";
 import "../src/styles/Experience.css";
 
-const pages = { login: Login, dashboard: Dashboard, companies: Companies, operations: Operations, reports: Reports, alerts: Alerts, drones: Drones, operators: Operators, readings: Readings, reading: ReadingPanel, company: CompanyPanel };
+const pages = { login: Login, dashboard: Dashboard, companies: Companies, operations: Operations, reports: Reports, alerts: Alerts, drones: Drones, operators: Operators, readings: Readings, reading: ReadingPanel, company: CompanyPanel, cockpit: CockpitPreview };
 export default function Preview() {
   const [page, setPage] = useState("dashboard");
   const [mode, setMode] = useState("populated");

@@ -4,9 +4,22 @@
     {
       "name": "gestock-frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "cwd": "frontend",
       "port": 5173
+    },
+    {
+      "name": "gestock-qa",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "preview:ui"
+      ],
+      "cwd": "frontend",
+      "port": 5174
     }
   ]
 }

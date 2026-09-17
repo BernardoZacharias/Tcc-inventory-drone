@@ -15,12 +15,22 @@ import { beepLeituraNova } from "../utils/beep";
 import { toast } from "../services/toast";
 import { isAdmin, currentEmpresaId, getCurrentUser } from "../utils/auth";
 import ScannerEffect from "../components/ScannerEffect";
+import DroneCockpit from "../components/DroneCockpit";
 import { useOperationalData } from "../hooks/useOperationalData";
+import useDroneAgent from "../hooks/useDroneAgent";
 import { OperationsFeedback } from "../components/OperationsFeedback";
 import "../styles/ReadingPanel.css";
 import "../styles/Pages.css";
 import "../styles/DashboardUX.css";
 const FETCHERS = [listarEmpresas, listarOperadores, listarSetores];
+
+/* Texto de estado quando quem manda é o Agent do drone. */
+function statusDoDrone(drone) {
+  if (drone.ligando) return "Abrindo a câmera do drone…";
+  if (drone.rodando) return "Câmera do drone ativa";
+  if (drone.erro) return "O leitor do drone parou";
+  return "Leitor pronto para iniciar";
+}
 
 /* Tempo relativo curto — "agora", "há 12s", "há 4min" */
 function tempoRelativo(iso) {
@@ -203,10 +213,27 @@ export default function ReadingPanel({ setPage, company }) {
   const [operadorId, setOperadorId] = useState("");
   const [setorId, setSetorId] = useState("");
 
-  const [status, setStatus] = useState("Verificando leitor…");
-  const [active, setActive] = useState(null);
+  // Estado do scanner de tela (o caminho do navegador, via API)
+  const [statusApi, setStatus] = useState("Verificando leitor…");
+  const [activeApi, setActive] = useState(null);
   const [readerBusy, setReaderBusy] = useState(false);
   const commandRef = useRef(false);
+
+  // Leitor do drone (só existe no aplicativo instalado)
+  const drone = useDroneAgent();
+  const droneDisponivel = drone.disponivel;
+  const [cockpitAberto, setCockpitAberto] = useState(false);
+
+  /*
+   * Há duas fontes possíveis para "o leitor está ligado?": o Agent do
+   * drone, no aplicativo, e a rota do scanner de tela, no navegador.
+   *
+   * Elas são DERIVADAS aqui, e não copiadas para dentro de um estado
+   * por efeito. Copiar geraria render em cascata e, pior, uma janela em
+   * que a tela mostra o valor antigo do Agent.
+   */
+  const active = drone.disponivel ? drone.rodando : activeApi;
+  const status = drone.disponivel ? statusDoDrone(drone) : statusApi;
   const [readingsError, setReadingsError] = useState("");
   const [readings, setReadings] = useState([]);
   const [soundOn, setSoundOn] = useState(false);
@@ -288,7 +315,11 @@ export default function ReadingPanel({ setPage, company }) {
     setCarregadoPara(empresaId);
   }, [empresaId, marcarNovos]);
 
-  async function syncStatus(current = () => true) {
+  const syncStatus = useCallback(async (current = () => true) => {
+    // No aplicativo quem manda é o Agent, não a rota do scanner de tela.
+    // Deixar as duas fontes escreverem em `active` faria o botão piscar
+    // entre "Iniciar" e "Parar".
+    if (droneDisponivel) return;
     if (commandRef.current) return;
     const r = await statusLeitura();
     if (!current() || commandRef.current) return;
@@ -299,7 +330,7 @@ export default function ReadingPanel({ setPage, company }) {
       setActive(null);
       setStatus("Estado do leitor indisponível");
     }
-  }
+  }, [droneDisponivel]);
 
   useEffect(() => {
     lastIdRef.current = 0;
@@ -321,9 +352,32 @@ export default function ReadingPanel({ setPage, company }) {
     tick();
     const id = setInterval(tick, 2500);
     return () => { cancelled = true; clearInterval(id); };
-  }, [empresaId, loadReadings]);
+  }, [empresaId, loadReadings, syncStatus]);
+
+  /*
+   * No aplicativo, "Iniciar leitura" abre a câmera do DRONE: sobe o
+   * Agent e mostra o vídeo na tela de voo.
+   *
+   * No navegador não há Agent para iniciar, então continua valendo o
+   * caminho antigo — a API dispara o scanner que captura a tela.
+   */
+  async function startDrone() {
+    if (!empresaId) { toast.error("Selecione uma empresa"); return; }
+    setCockpitAberto(true);
+
+    const r = await drone.iniciar({ empresaId });
+    if (r.ok) toast.success("Leitura iniciada — câmera do drone no ar");
+    // Se falhou, a tela fica aberta de propósito: é lá que o motivo
+    // aparece, com o log do Agent. Fechar aqui esconderia o diagnóstico.
+  }
+
+  async function stopDrone() {
+    await drone.parar();
+    setCockpitAberto(false);
+  }
 
   async function startReading() {
+    if (drone.disponivel) return startDrone();
     if (commandRef.current) return;
     if (!empresaId) { toast.error("Selecione uma empresa"); return; }
     setStatus("Iniciando leitura...");
@@ -345,6 +399,7 @@ export default function ReadingPanel({ setPage, company }) {
   }
 
   async function stopReading() {
+    if (drone.disponivel) return stopDrone();
     if (commandRef.current) return;
     commandRef.current = true;
     setReaderBusy(true);
@@ -663,6 +718,18 @@ export default function ReadingPanel({ setPage, company }) {
             </aside>
           </dialog>
         )}
+
+      {/* ── Tela de voo: a câmera do drone em tela cheia ── */}
+      <AnimatePresence>
+        {cockpitAberto && (
+          <DroneCockpit
+            key="cockpit"
+            agente={drone}
+            onFechar={stopDrone}
+            empresaNome={empresas.find((i) => String(i.id) === String(empresaId))?.nome}
+          />
+        )}
+      </AnimatePresence>
     </main>
   );
 }

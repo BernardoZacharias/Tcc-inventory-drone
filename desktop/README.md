@@ -60,6 +60,34 @@ npm --prefix ../frontend run dev     # terminal 1
 npm run dev                          # terminal 2 (usa localhost:5173)
 ```
 
+## A tela de voo
+
+Clicar em **Iniciar leitura** no painel sobe o Agent do drone e abre a
+tela de voo: a câmera do drone em tela cheia, métricas no topo e as
+leituras entrando à direita.
+
+O vídeo não passa por IPC. O Agent publica MJPEG num servidor que só
+escuta em `127.0.0.1`, e o React mostra com uma `<img>` comum — o
+navegador decodifica sozinho, sem codec e sem player. O Agent anuncia a
+porta escolhida numa linha do stdout (`GESTOCK_SERVIDOR porta=8765`), e
+é assim que o app descobre onde buscar; combinar um número fixo faria
+abrir o aplicativo duas vezes virar um conflito.
+
+**O decodificador é escolhido na hora**, e não no chute, porque as duas
+máquinas do projeto precisam de respostas opostas: no Windows o OpenCV
+funciona e o ffmpeg costuma não estar no PATH; no Arch os binários do
+OpenCV morrem com SIGILL e só o ffmpeg resolve. O app pergunta num
+subprocesso — tem que ser em subprocesso, porque SIGILL não é exceção
+de Python, é o processo sendo morto pelo sistema.
+
+Para conferir a cadeia inteira sem drone:
+
+```bash
+npm run smoke
+```
+
+---
+
 ## Gerando o instalador
 
 ```bash

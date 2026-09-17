@@ -9,6 +9,7 @@
  *   2. Ela responde de verdade (rota e banco)?
  *   3. Os três componentes (frontend, api, agent) estão no lugar?
  *   4. Existe Python para rodar o Agent?
+ *   5. O Agent sobe, anuncia a porta e transmite vídeo?
  *
  * Roda sob o Electron (`electron scripts/smoke.js`), porque é o único
  * jeito de testar o processo principal de verdade.
@@ -96,6 +97,68 @@ app.whenReady().then(async () => {
     );
   }
 
+  // ── O Agent e a tela de voo ──────────────────────────────────
+  //
+  // Esta é a cadeia inteira do botão "Iniciar leitura": o Electron
+  // spawna o Python, lê a porta que ele anuncia no stdout, e a tela
+  // busca vídeo e estado nessa porta. Usa a fonte sintética, para
+  // rodar sem o drone na mesa.
+  if (py) {
+    console.log("");
+    console.log("-- Agent do drone e transmissão --");
+    const inicio = agente.iniciar({ driver: "synthetic" });
+    checar(inicio.ok, "Agent iniciado", `Agent não iniciou: ${inicio.mensagem}`);
+
+    if (inicio.ok) {
+      let estadoAgente = null;
+      const limite = Date.now() + 25000;
+      while (Date.now() < limite) {
+        estadoAgente = agente.estado();
+        if (estadoAgente.porta || !estadoAgente.rodando) break;
+        await new Promise((r) => setTimeout(r, 300));
+      }
+
+      const temPorta = checar(
+        Boolean(estadoAgente?.porta),
+        `porta anunciada pelo Agent: ${estadoAgente?.porta}`,
+        `o Agent não anunciou a porta: ${estadoAgente?.erro || (estadoAgente?.saida || []).slice(-3).join(" | ")}`
+      );
+
+      if (temPorta) {
+        const est = await pedir(estadoAgente.urlEstado);
+        let equipamento = null;
+        try {
+          equipamento = JSON.parse(est.corpo).equipamento;
+        } catch {
+          /* resposta não-JSON */
+        }
+        checar(
+          est.status === 200 && Boolean(equipamento),
+          `GET /estado responde — equipamento: ${equipamento}`,
+          `GET /estado falhou: ${est.erro || est.status}`
+        );
+
+        // Só os cabeçalhos: o stream não termina nunca, então baixar o
+        // corpo inteiro deixaria o teste pendurado.
+        const video = await new Promise((resolve) => {
+          const req = http.get(estadoAgente.urlVideo, { timeout: 8000 }, (res) => {
+            const tipo = res.headers["content-type"] || "";
+            res.destroy();
+            resolve({ status: res.statusCode, tipo });
+          });
+          req.on("error", (e) => resolve({ erro: e.message }));
+          req.on("timeout", () => { req.destroy(); resolve({ erro: "timeout" }); });
+        });
+        checar(
+          video.status === 200 && video.tipo.includes("multipart/x-mixed-replace"),
+          "GET /video transmite MJPEG — a tela de voo tem imagem",
+          `GET /video falhou: ${video.erro || video.status} ${video.tipo || ""}`
+        );
+      }
+    }
+
+    agente.parar();
+  }
   console.log("\n=== conclusão ===");
   if (problemas === 0) {
     console.log("Tudo pronto. O aplicativo deve abrir com `npm start`.\n");

@@ -15,8 +15,14 @@ const fs = require("fs");
 const { agente: dirAgente } = require("./paths");
 
 let processo = null;
-let ultimoEstado = { rodando: false, saida: [], erro: null };
+let ultimoEstado = { rodando: false, saida: [], erro: null, porta: null };
 const LIMITE_LOG = 200;
+
+/* O Agent escolhe a porta do servidor local (se a 8765 estiver ocupada
+ * ele anda para a frente) e anuncia numa linha do stdout. Descobrir
+ * assim é melhor que combinar um número fixo: abrir o app duas vezes
+ * deixa de ser um conflito. */
+const MARCA_PORTA = /^GESTOCK_SERVIDOR porta=(\d+)/;
 
 /** Candidatos a interpretador, do mais específico ao mais genérico. */
 function candidatos() {
@@ -42,6 +48,38 @@ function acharPython() {
     }
   }
   return null;
+}
+
+/*
+ * Qual decodificador de vídeo usar nesta máquina.
+ *
+ * Não dá para escolher no chute, porque as duas máquinas do projeto
+ * precisam de respostas opostas:
+ *
+ *   Windows   o OpenCV funciona, e o ffmpeg normalmente NÃO está no PATH
+ *   Arch      os binários do OpenCV morrem com SIGILL nesta CPU, e aí
+ *             só o ffmpeg do sistema resolve
+ *
+ * Então a gente PERGUNTA, num subprocesso. Tem que ser em subprocesso:
+ * o SIGILL não é uma exceção de Python, é o processo sendo morto pelo
+ * sistema — perguntar dentro do próprio Agent derrubaria o Agent.
+ */
+let backendEmCache = null;
+
+function escolherBackend(python) {
+  if (backendEmCache) return backendEmCache;
+
+  try {
+    const r = spawnSync(python, ["-c", "import cv2, numpy; cv2.VideoCapture"], {
+      timeout: 20000,
+      cwd: dirAgente,
+    });
+    backendEmCache = r.status === 0 ? "opencv" : "ffmpeg";
+  } catch {
+    backendEmCache = "ffmpeg";
+  }
+
+  return backendEmCache;
 }
 
 function registrar(linha) {
@@ -70,14 +108,25 @@ function iniciar(opcoes = {}) {
     return { ok: false, mensagem: msg };
   }
 
+  const backend = opcoes.backend || escolherBackend(python);
+
   const args = [
     "-m", "src.main",
     "--driver", opcoes.driver || "flow-ufo",
-    "--backend", opcoes.backend || "ffmpeg",
+    "--backend", backend,
     "--headless",              // a janela de vídeo é do app, não do Python
+    "--servidor",              // publica vídeo e estado em 127.0.0.1
+    "--porta", String(opcoes.porta || 8765),
   ];
 
-  ultimoEstado = { rodando: true, saida: [], erro: null };
+  // Ler QR é o padrão: quem abre a tela de leitura quer ler, não só ver.
+  if (opcoes.qr !== false) {
+    args.push("--qr");
+    if (opcoes.upscale) args.push("--qr-upscale", String(opcoes.upscale));
+    if (opcoes.confirmacoes) args.push("--qr-confirmacoes", String(opcoes.confirmacoes));
+  }
+
+  ultimoEstado = { rodando: true, saida: [], erro: null, porta: null };
   registrar(`$ ${python} ${args.join(" ")}`);
 
   processo = spawn(python, args, {
@@ -91,9 +140,11 @@ function iniciar(opcoes = {}) {
   });
 
   const consumir = (fluxo) => (dados) => {
-    dados.toString().split(/\r?\n/).filter(Boolean).forEach((l) =>
-      registrar(fluxo === "err" ? `! ${l}` : l)
-    );
+    dados.toString().split(/\r?\n/).filter(Boolean).forEach((l) => {
+      const m = MARCA_PORTA.exec(l);
+      if (m) ultimoEstado.porta = Number(m[1]);
+      registrar(fluxo === "err" ? `! ${l}` : l);
+    });
   };
 
   processo.stdout.on("data", consumir("out"));
@@ -132,10 +183,16 @@ function parar() {
 }
 
 function estado() {
+  const porta = processo ? ultimoEstado.porta : null;
   return {
     rodando: Boolean(processo),
     erro: ultimoEstado.erro,
     saida: ultimoEstado.saida.slice(-40),
+    porta,
+    // Prontas para o <img> e o fetch da tela, para o React não ter que
+    // montar URL e errar o host.
+    urlVideo: porta ? `http://127.0.0.1:${porta}/video` : null,
+    urlEstado: porta ? `http://127.0.0.1:${porta}/estado` : null,
   };
 }
 

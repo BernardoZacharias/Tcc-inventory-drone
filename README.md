@@ -129,6 +129,7 @@ automáticos até o voo com o drone — está em **[docs/TESTES.md](docs/TESTES.
 | Aplicativo desktop + instalador Windows | ✅ funcionando |
 | Agent: vídeo do drone, reconexão automática | ✅ marco 1 |
 | Agent: leitura de QR confirmada e sem repetição | ✅ marco 2 |
+| Aplicativo: tela de voo com a câmera do drone ao vivo | ✅ funcionando |
 | Agent: fila offline em SQLite | ⬜ marco 3 |
 | Agent: sincronismo com a nuvem | ⬜ marco 4 (depende de uma VPS) |
 | Agent: empacotar como `.exe` | ⬜ marco 5 |

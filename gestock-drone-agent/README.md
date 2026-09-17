@@ -213,6 +213,55 @@ Se um dia alguém trocar o gerador de QR, esse teste avisa.
 
 ---
 
+## Mostrando o vídeo no aplicativo
+
+O Agent pode publicar o que está vendo num servidor HTTP local, que é
+como o aplicativo desenha a tela de voo:
+
+```bash
+python -m src.main --driver flow-ufo --qr --servidor
+```
+
+| Rota | O que devolve |
+|------|---------------|
+| `/video` | o vídeo, em MJPEG (`multipart/x-mixed-replace`) |
+| `/estado` | JSON com estado, métricas e leituras da sessão |
+| `/leituras` | JSON só com as leituras |
+| `/` | uma página mínima para conferir fora do aplicativo |
+
+Abra `http://127.0.0.1:8765/` no navegador e você vê o vídeo sem
+precisar do Electron.
+
+### Por que MJPEG
+
+A tela é React dentro do Electron. Passar quadro a quadro por IPC seria
+caro e ainda exigiria converter tudo para base64. Com MJPEG o React
+mostra o vídeo com uma `<img>` comum, e o navegador decodifica sozinho:
+sem codec, sem player, sem IPC de vídeo. A latência é de um quadro.
+
+### Duas decisões que não são detalhe
+
+**Escuta só em `127.0.0.1`.** Em `0.0.0.0`, qualquer um no mesmo Wi-Fi
+assistiria ao vídeo do estoque. Há teste fixando isso.
+
+**O JPEG é gerado sob demanda**, na thread de quem está assistindo. Sem
+ninguém olhando, não se gasta CPU comprimindo quadro que ninguém vê — e
+o laço que lê os QR nunca espera pelo vídeo.
+
+### Porta
+
+O padrão é `8765`. Se estiver ocupada, o Agent anda para a seguinte e
+anuncia a escolhida numa linha do stdout:
+
+```
+GESTOCK_SERVIDOR porta=8766
+```
+
+É assim que o aplicativo descobre onde buscar o vídeo — combinar um
+número fixo faria abrir o app duas vezes virar um conflito.
+
+---
+
 ## Testes
 
 Rodam em qualquer máquina, sem drone e sem câmera:
@@ -220,6 +269,7 @@ Rodam em qualquer máquina, sem drone e sem câmera:
 ```bash
 python tests/test_engine.py     # marco 1 — vídeo
 python tests/test_qr.py         # marco 2 — leitura
+python tests/test_servidor.py   # a ponte com o aplicativo
 ```
 
 O primeiro prova que o engine entrega frames, **sempre entrega o mais
@@ -249,6 +299,10 @@ decodificação está quebrada.
 | `--qr-fps` | `12` | quantos quadros por segundo analisar |
 | `--qr-upscale` | `1.0` | amplia antes de decodificar (use `2` para etiqueta pequena/longe) |
 | `--qr-recorte` | `0` | ignora as bordas (ex.: `0.15` foca no centro) |
+| `--servidor` | — | publica vídeo e estado em `127.0.0.1` para o aplicativo |
+| `--porta` | `8765` | porta do servidor local; anda para a seguinte se ocupada |
+| `--video-fps` | `15` | quadros por segundo enviados para a tela |
+| `--video-qualidade` | `80` | qualidade do JPEG, de 1 a 100 |
 | `--stall-timeout` | `5` | segundos sem frame válido até reconectar |
 | `--max-reconnects` | `0` | `0` = tenta para sempre |
 | `--headless` | — | não abre janela |

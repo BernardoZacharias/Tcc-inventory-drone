@@ -12,7 +12,7 @@ leitor, a rede, a câmera ou o banco.
 | [2](#2-leitor-de-qr-sem-câmera) | nada | o leitor de QR funciona | 10 s |
 | [3](#3-leitor-de-qr-com-a-webcam) | webcam | a leitura funciona com câmera real | 2 min |
 | [4](#4-sistema-completo-no-navegador) | Supabase | API + banco + painel | 5 min |
-| [5](#5-o-aplicativo-instalável) | — | o app abre e acha o Agent | 2 min |
+| [5](#5-o-aplicativo-instalável) | — | o app abre, lê o drone e mostra o vídeo | 3 min |
 | [6](#6-o-drone-de-verdade) | drone FLOW-UFO | tudo junto | — |
 
 ---
@@ -39,6 +39,9 @@ O que eles provam:
 - **`test_qr.py`** (22 testes) — um código não é aceito com uma aparição
   só, o mesmo código conta uma vez por sessão, e um QR **de verdade** é
   lido, inclusive escuro e borrado.
+- **`test_servidor.py`** (10 testes) — a ponte com o aplicativo: o vídeo
+  escuta **só** em `127.0.0.1`, o MJPEG carrega JPEG de verdade, e uma
+  porta ocupada não derruba o Agent.
 
 > O último é o que mais importa. Sem ele, os testes passariam numa
 > máquina onde a decodificação está quebrada — foi exatamente esse buraco
@@ -186,6 +189,37 @@ A tela de acesso faz uma **checagem pré-voo** e mostra quatro itens:
 
 Se "Leitor do drone" ficar amarelo, o Python não foi encontrado — rode o
 script de instalação, que cria o `.venv` no lugar onde o app procura.
+
+### A tela de voo
+
+Selecione a empresa e clique em **Iniciar leitura**. No aplicativo esse
+botão não dispara mais o scanner de tela: ele sobe o Agent do drone e
+abre a **tela de voo** em tela cheia, com a câmera do drone ao vivo, as
+métricas no topo e as leituras entrando à direita. `ESC` ou **Encerrar**
+fecha e desliga o Agent.
+
+Dá para conferir tudo isso sem drone:
+
+```bash
+cd desktop
+npm run smoke
+```
+
+O teste de fumaça percorre a cadeia inteira do botão — sobe o Agent com
+a fonte sintética, confere a porta que ele anuncia, o `/estado` e o
+`/video`. Se ele passar, a tela de voo tem imagem.
+
+E para inspecionar só a tela, sem empacotar nada:
+
+```bash
+cd gestock-drone-agent && .venv\Scripts\python -m src.main --driver synthetic --qr --servidor
+```
+
+```bash
+cd frontend && npm run preview:ui
+```
+
+Abra `http://127.0.0.1:5174/qa/index.html` e escolha **cockpit**.
 
 Para gerar o instalador `.exe`:
 

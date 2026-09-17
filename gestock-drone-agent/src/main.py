@@ -44,11 +44,13 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from src.core.states import AgentState, StateMachine
     from src.drivers import build_driver
+    from src.server import EstadoCompartilhado, ServidorLocal
     from src.video.engine import VideoEngine
     from src.vision.qr_reader import QrEngine
 else:
     from .core.states import AgentState, StateMachine
     from .drivers import build_driver
+    from .server import EstadoCompartilhado, ServidorLocal
     from .video.engine import VideoEngine
     from .vision.qr_reader import QrEngine
 
@@ -179,6 +181,20 @@ def main(argv: Optional[list] = None) -> int:
                    help="ignora esta fração das bordas (ex.: 0.15). Foca no "
                         "centro do quadro e acelera a análise")
 
+    # ── servidor local (o aplicativo consome daqui) ──────────────
+    p.add_argument("--servidor", action="store_true",
+                   help="publica o vídeo e o estado em http://127.0.0.1 "
+                        "para o aplicativo exibir. Escuta só na própria "
+                        "máquina: o vídeo do galpão não vai para a rede")
+    p.add_argument("--porta", type=int, default=8765,
+                   help="porta do servidor local (padrão: 8765). Se estiver "
+                        "ocupada, tenta as 10 seguintes")
+    p.add_argument("--video-fps", type=float, default=15.0, metavar="F",
+                   help="quadros por segundo enviados para a tela "
+                        "(padrão: 15). Não afeta a leitura de QR")
+    p.add_argument("--video-qualidade", type=int, default=80, metavar="Q",
+                   help="qualidade do JPEG enviado, de 1 a 100 (padrão: 80)")
+
     p.add_argument("--stall-timeout", type=float, default=5.0,
                    help="segundos sem frame válido até reconectar")
     p.add_argument("--max-reconnects", type=int, default=0,
@@ -213,6 +229,15 @@ def main(argv: Optional[list] = None) -> int:
         except ValueError as exc:
             raise SystemExit(f"Configuração de QR inválida: {exc}")
 
+    compartilhado: Optional[EstadoCompartilhado] = None
+    servidor: Optional[ServidorLocal] = None
+    if args.servidor:
+        compartilhado = EstadoCompartilhado()
+        servidor = ServidorLocal(
+            compartilhado, porta=args.porta,
+            fps_video=args.video_fps, qualidade=args.video_qualidade,
+        )
+
     log.info("Gestock Drone Agent — conexão, vídeo e leitura de QR")
     log.info("Equipamento: %s", driver.describe())
     if qr is not None:
@@ -230,6 +255,16 @@ def main(argv: Optional[list] = None) -> int:
     signal.signal(signal.SIGINT, _sinal)
     if hasattr(signal, "SIGTERM"):
         signal.signal(signal.SIGTERM, _sinal)
+
+    if servidor is not None:
+        compartilhado.publicar_estado(
+            machine.state.value, machine.state.rotulo, {},
+            equipamento=str(driver.describe()),
+        )
+        if servidor.iniciar() is None:
+            log.error("Não consegui abrir o servidor local. O Agent continua "
+                      "lendo, mas o aplicativo não vai mostrar o vídeo.")
+            servidor = None
 
     engine.start()
 
@@ -267,6 +302,12 @@ def main(argv: Optional[list] = None) -> int:
             # RawFrame (sem numpy) não serve nem para imshow nem para QR
             utilizavel = ok and hasattr(frame, "dtype")
 
+            # A tela do aplicativo recebe o mesmo quadro que o leitor vê.
+            # Só a referência é publicada: quem comprime em JPEG é a
+            # thread de quem está assistindo, e só se houver alguém.
+            if compartilhado is not None and utilizavel:
+                compartilhado.publicar_frame(frame)
+
             # ── leitura de QR ────────────────────────────────────
             agora = time.monotonic()
             if qr is not None and ok:
@@ -284,6 +325,8 @@ def main(argv: Optional[list] = None) -> int:
                         for leitura in qr.processar(frame):
                             log.info("[QR %s] %s", leitura.estrategia,
                                      leitura.dados.resumo())
+                            if compartilhado is not None:
+                                compartilhado.publicar_leitura(leitura)
                     except Exception as exc:  # noqa: BLE001 - visão não derruba o voo
                         log.warning("Falha ao analisar o quadro: %s", exc)
 
@@ -297,8 +340,17 @@ def main(argv: Optional[list] = None) -> int:
             if agora - ultimo_print >= 1.0:
                 ultimo_print = agora
                 print(linha_status(machine, engine, qr), flush=True)
+
+                if compartilhado is not None:
+                    metricas = engine.stats.resumo()
+                    if qr is not None:
+                        metricas.update(qr.stats.resumo())
+                    compartilhado.publicar_estado(
+                        machine.state.value, machine.state.rotulo, metricas)
     finally:
         engine.stop()
+        if servidor is not None:
+            servidor.parar()
         if mostrar and cv2 is not None:
             try:
                 cv2.destroyAllWindows()
