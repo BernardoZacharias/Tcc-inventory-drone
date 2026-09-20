@@ -67,10 +67,17 @@
 .nav-goo__gota {
   position: absolute;
   left: 0;
-  /* Quanto mais a gota entra na barra, mais grosso fica o pescoço que
-     o filtro desenha entre as duas. Pouco demais e ela parece só uma
-     bolinha solta embaixo. */
-  top: 48%;
+  /*
+   * Ancorada na BORDA DE BAIXO da barra, não numa porcentagem da
+   * altura. Em porcentagem ela subia até 19px numa barra de 39px e
+   * cobria o texto do item, que termina em 27px.
+   *
+   * Daqui, os 10px que entram na barra ficam na faixa de respiro
+   * abaixo da palavra: grosso o bastante para o filtro desenhar o
+   * pescoço, e sem encostar em nenhuma letra.
+   */
+  top: auto;
+  bottom: -24px;
   width: 34px;
   height: 34px;
   border-radius: var(--radius-full);
@@ -99,7 +106,8 @@
 .nav-goo__icone {
   position: absolute;
   left: 0;
-  top: 48%;
+  top: auto;
+  bottom: -24px;
   z-index: 2;
   width: 34px;
   height: 34px;
