@@ -105,6 +105,14 @@ cd desktop    && npm start       # o aplicativo
 | `admin@gestock.com.br` | `123456` | admin (vê todas as empresas) |
 | `vanderlei@gestock.com.br` | `123456` | operador (vê só a dele) |
 
+> Estas são as senhas que o **`npm run db:setup` cria**. Se a senha foi
+> trocada direto no banco depois disso, vale a do banco — o seed não é
+> reaplicado. Para conferir qual está valendo:
+>
+> ```bash
+> cd api-node && node -e "require('dotenv').config();const db=require('./src/config/db');(async()=>{const [r]=await db.query('SELECT email, perfil FROM usuarios');console.table(r);process.exit(0)})()"
+> ```
+
 ---
 
 ## Testando
