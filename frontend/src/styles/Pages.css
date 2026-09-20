@@ -15,6 +15,25 @@
   .two-col { grid-template-columns: 1fr; }
 }
 
+/* ── Título de painel ──
+   O reset global faz `svg { display: block }`. Num título escrito como
+   `<h2><Icone /> Texto</h2>`, isso joga o ícone para uma linha só dele
+   — e, com a entrelinha do h2, ele acaba POR CIMA do texto.
+
+   O painel de formulário já se defendia disso; os painéis de listagem
+   não, e apareciam quebrados em Operações, Relatórios, Alertas, Drones
+   e Operadores. A regra vale para os dois agora.
+
+   Só layout aqui, de propósito: mexer em tamanho ou margem mudaria
+   telas que já estão certas. */
+.panel-box > h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-box > h2 > svg { flex-shrink: 0; }
+
 /* ── Form panel ── */
 .form-panel h2 {
   display: flex; align-items: center; gap: 8px;
