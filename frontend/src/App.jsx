@@ -1,24 +1,38 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useState } from "react";
 import useReveal from "./hooks/useReveal";
 import useScrollFX from "./hooks/useScrollFX";
 import "./styles/ScrollFX.css";
 import LoadingScreen from "./components/LoadingScreen";
 import CursorDrone from "./components/CursorDrone";
+
+/*
+ * As três primeiras telas vêm no pacote inicial; o resto é buscado
+ * quando alguém for para lá.
+ *
+ * Antes tudo vinha junto, e o resultado era um único arquivo de ~500 KB:
+ * quem abria a página inicial baixava o painel de relatórios, a tela de
+ * alertas e o cockpit do drone sem nunca abrir nenhum deles.
+ *
+ * Home, Login e Dashboard ficam de fora dessa divisão de propósito —
+ * são os pontos de entrada (o site abre na Home, o aplicativo no Login)
+ * e dividi-las só trocaria bytes por um piscar de carregamento.
+ */
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import CompanyPanel from "./pages/CompanyPanel";
-import ReadingPanel from "./pages/ReadingPanel";
-import About from "./pages/About";
-import Technology from "./pages/Technology";
-import Contact from "./pages/Contact";
-import Companies from "./pages/Companies";
-import Operations from "./pages/Operations";
-import Reports from "./pages/Reports";
-import Alerts from "./pages/Alerts";
-import Drones from "./pages/Drones";
-import Readings from "./pages/Readings";
-import Operators from "./pages/Operators";
+
+const CompanyPanel = lazy(() => import("./pages/CompanyPanel"));
+const ReadingPanel = lazy(() => import("./pages/ReadingPanel"));
+const About = lazy(() => import("./pages/About"));
+const Technology = lazy(() => import("./pages/Technology"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Companies = lazy(() => import("./pages/Companies"));
+const Operations = lazy(() => import("./pages/Operations"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Alerts = lazy(() => import("./pages/Alerts"));
+const Drones = lazy(() => import("./pages/Drones"));
+const Readings = lazy(() => import("./pages/Readings"));
+const Operators = lazy(() => import("./pages/Operators"));
 import { getCurrentUser } from "./utils/auth";
 import { PAGE_TITLES, resolveRoute, defaultRoute, isDesktop } from "./utils/navigation";
 import { EVENTO_SESSAO_EXPIRADA } from "./services/api";
@@ -137,6 +151,11 @@ export default function App() {
         {page === "home"       && <Home setPage={setPage} />}
         {page === "login"      && <Login setPage={setPage} />}
         {page === "dashboard"  && <Dashboard setPage={setPage} goToCompany={goToCompany} />}
+
+        {/* `fallback` vazio de propósito: numa rede local a tela chega
+            em milissegundos, e um spinner piscando seria pior que a
+            troca direta. */}
+        <Suspense fallback={null}>
         {page === "company"    && <CompanyPanel setPage={setPage} company={selectedCompany} />}
         {page === "reading"    && <ReadingPanel setPage={setPage} company={selectedCompany} />}
         {page === "about"      && <About setPage={setPage} />}
@@ -149,6 +168,7 @@ export default function App() {
         {page === "drones"     && <Drones setPage={setPage} />}
         {page === "readings"   && <Readings setPage={setPage} />}
         {page === "operators"  && <Operators setPage={setPage} />}
+        </Suspense>
       </div>
       {booting && <LoadingScreen onComplete={finishIntro} />}
       {!booting && ["home", "about", "technology"].includes(page) && <CursorDrone />}

@@ -88,6 +88,40 @@ npm run smoke
 
 ---
 
+## Por que o instalador tem o tamanho que tem
+
+Medido no pacote de Windows:
+
+| | antes | agora |
+|---|---|---|
+| instalador | 80,1 MB | **72,4 MB** |
+| traduções do Chromium | 40,3 MB (55 idiomas) | **1,0 MB** (pt-BR, en-US) |
+| descompactado | ~270 MB | 233 MB |
+
+**O código do projeto são 4,5 MB.** O resto é o Chromium que o Electron
+embute: 180 MB só no executável, mais 10 MB de dados de
+internacionalização e 8,7 MB do texto de licenças, que é obrigatório
+distribuir.
+
+O que dava para cortar sem risco foi cortado: 53 idiomas que ninguém ia
+usar e a compressão do instalador no máximo. O que sobrou é o piso do
+Electron.
+
+**Para um instalador de 10 a 15 MB seria preciso trocar de casca** — o
+Tauri, por exemplo, usa o navegador que já existe no sistema em vez de
+levar um junto. É uma reescrita do `desktop/`, não um ajuste de
+configuração, e ficaria para depois da apresentação.
+
+O que **não** foi removido, e por quê:
+
+| Arquivo | Tamanho | Por que fica |
+|---|---|---|
+| `LICENSES.chromium.html` | 8,7 MB | distribuir o texto das licenças é obrigação legal |
+| `icudtl.dat` | 10 MB | sem ele, datas e números param de formatar |
+| `vk_swiftshader.dll` | 5,3 MB | renderização por software; sem ela a janela abre preta em máquina sem driver de vídeo |
+
+---
+
 ## Gerando o instalador
 
 ```bash

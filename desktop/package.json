@@ -27,6 +27,9 @@
   "build": {
     "appId": "br.com.gestock.drone",
     "productName": "Gestock Drone",
+
+    "electronLanguages": ["pt-BR", "en-US"],
+    "compression": "maximum",
     "directories": {
       "output": "dist-app",
       "buildResources": "build"
