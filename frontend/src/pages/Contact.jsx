@@ -5,7 +5,6 @@ import {
   Phone, Send, User, Warehouse, CheckCircle2, AlertCircle
 } from "lucide-react";
 
-import Navbar from "../components/Navbar";
 import Button from "../components/Button";
 import BotaoInstalador from "../components/BotaoInstalador";
 import ScannerEffect from "../components/ScannerEffect";
@@ -53,7 +52,6 @@ export default function Contact({ setPage }) {
 
   return (
     <main className="contact-page">
-      <Navbar setPage={setPage} current="contact" />
 
       <section className="contact-hero">
         <button className="contact-back" onClick={() => setPage("home")}>

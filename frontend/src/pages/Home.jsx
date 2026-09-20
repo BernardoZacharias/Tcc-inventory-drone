@@ -3,7 +3,6 @@ import "../styles/DroneHero.css";
 import { motion } from "framer-motion";
 import { Boxes, QrCode, Radar, ShieldCheck } from "lucide-react";
 
-import Navbar from "../components/Navbar";
 import DroneAnimation from "../components/DroneAnimation";
 import ScannerEffect from "../components/ScannerEffect";
 import BenefitCard from "../components/BenefitCard";
@@ -36,7 +35,6 @@ const cleanScaleIn = {
 export default function Home({ setPage }) {
   return (
     <main className="home">
-      <Navbar setPage={setPage} current="home" />
 
       {/* ── HERO ── */}
       <section className="hero">

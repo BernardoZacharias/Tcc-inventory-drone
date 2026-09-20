@@ -14,7 +14,6 @@ import {
 
 import Button from "../components/Button";
 import BotaoInstalador from "../components/BotaoInstalador";
-import Navbar from "../components/Navbar";
 import ScannerEffect from "../components/ScannerEffect";
 import "../styles/About.css";
 import "../styles/PublicUX.css";
@@ -22,7 +21,6 @@ import "../styles/PublicUX.css";
 export default function About({ setPage }) {
   return (
     <main className="about-page">
-      <Navbar setPage={setPage} current="about" />
       <section className="about-hero">
         <button className="about-back" onClick={() => setPage("home")}>
           <ArrowLeft size={18} />

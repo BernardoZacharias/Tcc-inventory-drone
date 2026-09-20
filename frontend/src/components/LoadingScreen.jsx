@@ -74,7 +74,15 @@ export default function LoadingScreen({ onComplete }) {
     const takeoffTimer = window.setTimeout(() => {
       const unit = droneUnitRef.current;
       const loaderDrone = unit?.querySelector(".gestock-loader__drone");
-      const landingDrone = document.querySelector(".drone-stage .drone-model");
+      /*
+       * O drone do topo da página inicial, para onde a aeronave da
+       * abertura voa. O seletor apontava para `.drone-stage
+       * .drone-model`, que deixou de existir quando o drone em vetor
+       * foi trocado pela foto — e sem alvo a passagem de bastão não
+       * acontecia: a aeronave sumia com a abertura e o drone da home
+       * aparecia noutro lugar, dando a impressão de piscar.
+       */
+      const landingDrone = document.querySelector(".palco-drone__aeronave");
 
       if (unit && loaderDrone && landingDrone) {
         const source = loaderDrone.getBoundingClientRect();
@@ -92,7 +100,9 @@ export default function LoadingScreen({ onComplete }) {
       document.body.classList.add("gestock-is-handoff");
       frame = window.requestAnimationFrame(() => setDeparting(true));
     }, 320);
-    const finishTimer = window.setTimeout(() => onComplete?.(), 1800);
+    // 320ms até a decolagem + 1180ms de voo + 380ms de fusão = 1880.
+    // Desmontar antes disso cortaria a troca pela metade.
+    const finishTimer = window.setTimeout(() => onComplete?.(), 2000);
 
     return () => {
       window.clearTimeout(takeoffTimer);

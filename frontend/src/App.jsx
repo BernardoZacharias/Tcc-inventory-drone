@@ -1,9 +1,15 @@
 import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { direcaoEntre, transicaoDeTela } from "./utils/transicao";
+
+/* As telas institucionais, que compartilham a mesma barra de navegação. */
+const MOSTRAM_NAVEGACAO = new Set(["home", "about", "technology", "contact"]);
 import useReveal from "./hooks/useReveal";
 import useScrollFX from "./hooks/useScrollFX";
 import "./styles/ScrollFX.css";
 import LoadingScreen from "./components/LoadingScreen";
 import CursorDrone from "./components/CursorDrone";
+import Navbar from "./components/Navbar";
 
 /*
  * As três primeiras telas vêm no pacote inicial; o resto é buscado
@@ -33,6 +39,7 @@ const Alerts = lazy(() => import("./pages/Alerts"));
 const Drones = lazy(() => import("./pages/Drones"));
 const Readings = lazy(() => import("./pages/Readings"));
 const Operators = lazy(() => import("./pages/Operators"));
+
 import { getCurrentUser } from "./utils/auth";
 import { PAGE_TITLES, resolveRoute, defaultRoute, isDesktop } from "./utils/navigation";
 import { EVENTO_SESSAO_EXPIRADA } from "./services/api";
@@ -74,9 +81,21 @@ export default function App() {
     setBooting(false);
   }, []);
 
+  /*
+   * Direção do último movimento: 1 para a frente, -1 para trás, 0 sem
+   * deslize. É estado, e não ref, porque as variantes a leem durante a
+   * renderização — e ref lido em render volta valor defasado.
+   *
+   * Muda junto com a rota, no mesmo manipulador de evento, então as
+   * duas atualizações entram no mesmo render.
+   */
+  const [direcao, setDirecao] = useState(0);
+  const semMovimento = useReducedMotion();
+
   const navigate = useCallback((destination, company) => {
     const next = resolveRoute(destination, company, hasSession());
     if (next.page === route.page && next.company?.id === route.company?.id) return;
+    setDirecao(direcaoEntre(route.page, next.page));
     window.history.pushState({ ...window.history.state, gestock: next }, "", `#/${next.page}`);
     setRoute(next);
   }, [route]);
@@ -148,6 +167,37 @@ export default function App() {
         aria-hidden={booting || undefined}
         inert={booting || undefined}
       >
+        {/*
+          A NAVEGAÇÃO FICA FORA DA CAMADA QUE ANIMA.
+
+          Cada página institucional montava a sua própria barra, e como
+          a barra vinha dentro do bloco animado, ela deslizava junto com
+          o conteúdo — a referência fixa da tela saía do lugar a cada
+          clique.
+
+          Montada aqui, ela nunca sai do lugar e nunca é remontada: a
+          gota do item ativo passa a DESLIZAR de uma aba para a outra,
+          em vez de reaparecer no destino.
+        */}
+        {MOSTRAM_NAVEGACAO.has(page) && <Navbar setPage={setPage} current={page} />}
+
+        {/*
+          A troca de tela desliza na direção do clique.
+
+          `mode="wait"` garante que a que sai termine antes de a próxima
+          entrar: com as duas ao mesmo tempo, seria preciso tirá-las do
+          fluxo com posicionamento absoluto, e aí a altura da página
+          saltaria no meio da transição.
+        */}
+        <AnimatePresence mode="wait" custom={direcao} initial={false}>
+          <motion.div
+            key={page}
+            custom={direcao}
+            variants={semMovimento ? undefined : transicaoDeTela}
+            initial="entrar"
+            animate="centro"
+            exit="sair"
+          >
         {page === "home"       && <Home setPage={setPage} />}
         {page === "login"      && <Login setPage={setPage} />}
         {page === "dashboard"  && <Dashboard setPage={setPage} goToCompany={goToCompany} />}
@@ -169,6 +219,8 @@ export default function App() {
         {page === "readings"   && <Readings setPage={setPage} />}
         {page === "operators"  && <Operators setPage={setPage} />}
         </Suspense>
+          </motion.div>
+        </AnimatePresence>
       </div>
       {booting && <LoadingScreen onComplete={finishIntro} />}
       {!booting && ["home", "about", "technology"].includes(page) && <CursorDrone />}

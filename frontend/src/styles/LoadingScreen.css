@@ -33,17 +33,35 @@ body.gestock-is-loading {
   z-index: calc(var(--z-toast) + 100);
 }
 
+/*
+ * A ORDEM IMPORTA AQUI, e era ela que estava errada.
+ *
+ * O voo da aeronave até a página inicial leva 1,42s. O fundo saía aos
+ * 0,9s e o drone da home aparecia aos 1,04s -- ou seja, a aeronave
+ * ainda estava no ar quando tudo em volta já tinha sumido, e a da home
+ * acendia noutro ponto. Era isso que parecia "sumir e voltar".
+ *
+ * Agora o fundo só começa a sair quando a aeronave está pousando, e no
+ * mesmo instante em que a da home acende: as duas estão sobrepostas
+ * nesse momento (o voo termina exatamente em cima dela), então a troca
+ * não se vê.
+ */
 .gestock-loader.is-departing {
   opacity: 0;
-  transition-delay: 900ms;
+  transition: opacity 380ms var(--ease-fluid);
+  transition-delay: 1180ms;
 }
 
-body.gestock-is-loading .home .drone-craft {
+/* Enquanto a abertura roda, o drone do topo fica escondido: são dois
+   desenhos da mesma aeronave, e mostrar os dois ao mesmo tempo é o que
+   fazia parecer que ela piscava. */
+body.gestock-is-loading .home .palco-drone__voo {
   opacity: 0;
 }
 
-body.gestock-is-loading.gestock-is-handoff .home .drone-craft {
-  animation: heroDroneReceive 440ms var(--ease-fluid) 1040ms both;
+/* Ele "recebe" a aeronave quando ela chega, já no fim da abertura. */
+body.gestock-is-loading.gestock-is-handoff .home .palco-drone__voo {
+  animation: heroDroneReceive 380ms var(--ease-fluid) 1180ms both;
 }
 
 .gestock-loader__aurora,

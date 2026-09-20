@@ -19,7 +19,6 @@ import {
 
 import Button from "../components/Button";
 import BotaoInstalador from "../components/BotaoInstalador";
-import Navbar from "../components/Navbar";
 import ScannerEffect from "../components/ScannerEffect";
 import "../styles/Technology.css";
 import "../styles/PublicUX.css";
@@ -27,7 +26,6 @@ import "../styles/PublicUX.css";
 export default function Technology({ setPage }) {
   return (
     <main className="technology-page">
-      <Navbar setPage={setPage} current="technology" />
       <section className="technology-hero">
         <button className="technology-back" onClick={() => setPage("home")}>
           <ArrowLeft size={18} />
