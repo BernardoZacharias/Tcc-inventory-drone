@@ -7,17 +7,18 @@ import {
   Drone,
   Eye,
   GitBranch,
+  HardDrive,
+  MonitorDown,
   Network,
   QrCode,
   RadioTower,
-  ScanLine,
   Server,
   ShieldCheck,
-  Smartphone,
   Workflow
 } from "lucide-react";
 
 import Button from "../components/Button";
+import BotaoInstalador from "../components/BotaoInstalador";
 import Navbar from "../components/Navbar";
 import ScannerEffect from "../components/ScannerEffect";
 import "../styles/Technology.css";
@@ -47,13 +48,13 @@ export default function Technology({ setPage }) {
           </h1>
 
           <p>
-            O sistema combina visão computacional, backend em Node.js,
-            integração com Python e uma interface preparada para controle
-            operacional por empresa.
+            Um aplicativo instalável que conversa direto com o drone,
+            lê os QR Codes na própria máquina e sincroniza com a nuvem
+            quando há internet — porque, dentro do galpão, quase nunca há.
           </p>
 
           <div className="technology-actions">
-            <Button onClick={() => setPage("login")}>Acessar sistema</Button>
+            <BotaoInstalador />
             <Button variant="secondary" onClick={() => setPage("about")}>
               Sobre o sistema
             </Button>
@@ -91,34 +92,44 @@ export default function Technology({ setPage }) {
 
         <div className="technology-stack-grid">
           <TechCard
-            icon={Drone}
-            title="Drone + Celular"
-            text="O drone transmite o vídeo para o celular, que é espelhado no computador."
+            icon={RadioTower}
+            title="RTSP direto do drone"
+            text="O computador entra na rede do próprio drone e recebe o vídeo por RTSP. Sem espelhar tela, sem aplicativo intermediário."
           />
           <TechCard
-            icon={Smartphone}
-            title="Scrcpy"
-            text="Espelha a tela do celular no PC para que o Python consiga capturar o vídeo."
+            icon={Cpu}
+            title="Agent na borda"
+            text="Um processo Python roda junto do operador e decide o que é leitura válida. A nuvem não alcança a rede fechada do drone — quem está perto precisa fazer o trabalho."
           />
           <TechCard
             icon={Eye}
-            title="Python + OpenCV"
-            text="Responsável por capturar a tela, processar a imagem e identificar QR Codes."
+            title="OpenCV + pyzbar"
+            text="Seis tratamentos de imagem para a etiqueta sobreviver a sombra, reflexo e ao borrão do voo. O leitor começa pelo que funcionou no quadro anterior."
+          />
+          <TechCard
+            icon={HardDrive}
+            title="SQLite local"
+            text="Cada leitura é gravada no disco antes de qualquer tentativa de rede, e sobe sozinha quando a internet volta. É o que faz o inventário sobreviver ao galpão."
           />
           <TechCard
             icon={Server}
             title="Node.js + Express"
-            text="API principal que recebe, processa e disponibiliza as leituras para o front-end."
+            text="API que interpreta a etiqueta, organiza os registros e serve o painel."
           />
           <TechCard
             icon={Database}
-            title="PostgreSQL"
-            text="Persiste empresas, setores, operações e histórico de leituras, com integração ao Supabase."
+            title="PostgreSQL + Supabase"
+            text="Guarda empresas, setores, operações e o histórico de leituras."
+          />
+          <TechCard
+            icon={MonitorDown}
+            title="Electron"
+            text="Empacota painel, API e Agent num instalador único. O operador abre um programa, não três terminais."
           />
           <TechCard
             icon={Cpu}
             title="React + Vite"
-            text="Interface moderna, modular e preparada para dashboards operacionais."
+            text="Interface do painel, com tema claro e escuro e as telas de operação."
           />
         </div>
       </section>
@@ -128,39 +139,40 @@ export default function Technology({ setPage }) {
           <span className="tag">Fluxo técnico</span>
           <h2>Como a informação percorre o sistema</h2>
           <p>
-            A leitura começa no vídeo do drone, passa pelo processamento visual,
-            é enviada para a API e depois aparece no painel web.
+            A leitura nasce no vídeo do drone e é decidida ali mesmo, na
+            máquina do operador. A nuvem entra depois — e só quando dá.
           </p>
         </div>
 
         <div className="technology-flow">
-          <FlowStep number="01" icon={Drone} title="Drone" text="Captura o ambiente logístico." />
+          <FlowStep number="01" icon={Drone} title="Drone" text="Transmite o vídeo por RTSP na rede dele." />
           <FlowLine />
-          <FlowStep number="02" icon={Smartphone} title="Celular" text="Recebe o vídeo ao vivo." />
+          <FlowStep number="02" icon={Eye} title="Leitura" text="O Agent acha o QR e confirma em vários quadros." />
           <FlowLine />
-          <FlowStep number="03" icon={Eye} title="OpenCV" text="Detecta o QR Code na imagem." />
+          <FlowStep number="03" icon={HardDrive} title="Fila local" text="A leitura é gravada no disco na hora." />
           <FlowLine />
-          <FlowStep number="04" icon={Network} title="API" text="Recebe a leitura via HTTP." />
+          <FlowStep number="04" icon={Network} title="Sincronismo" text="Sobe para a API assim que houver internet." />
           <FlowLine />
-          <FlowStep number="05" icon={Database} title="Dados" text="Armazena e organiza registros." />
+          <FlowStep number="05" icon={Database} title="Painel" text="O inventário aparece para a equipe." />
         </div>
       </section>
 
       <section className="technology-architecture">
         <div className="architecture-left">
           <span className="tag">Arquitetura</span>
-          <h2>Separação profissional por serviços</h2>
+          <h2>Cada parte com uma responsabilidade</h2>
           <p>
-            Visão computacional, API e interface têm responsabilidades próprias.
-            A captura identifica os códigos, a API organiza os registros e o
-            painel apresenta as informações para a equipe de operação.
+            O que exige estar perto do drone roda perto do drone; o que
+            precisa ser consultado de qualquer lugar fica na nuvem. Essa
+            divisão não é estética — é o que permite operar num galpão
+            sem sinal e ainda assim ter o inventário no painel depois.
           </p>
 
           <div className="architecture-list">
-            <ArchitectureItem icon={GitBranch} title="Frontend" text="React com telas, componentes e serviços de API." />
-            <ArchitectureItem icon={Server} title="Backend" text="Node + Express com rotas, controllers e services." />
-            <ArchitectureItem icon={Eye} title="Vision" text="Python responsável pela captura e leitura do QR Code." />
-            <ArchitectureItem icon={ShieldCheck} title="Camadas" text="Separação entre apresentação, regra de negócio e processamento." />
+            <ArchitectureItem icon={Cpu} title="Agent" text="Fala com o drone, lê os QR e guarda a fila local. Roda na borda." />
+            <ArchitectureItem icon={MonitorDown} title="Aplicativo" text="Electron reunindo painel, API e Agent num instalador só." />
+            <ArchitectureItem icon={Server} title="API" text="Node + Express: interpreta a etiqueta e é dona das regras." />
+            <ArchitectureItem icon={GitBranch} title="Painel" text="React com as telas de operação, leituras e relatórios." />
           </div>
         </div>
 
@@ -178,9 +190,9 @@ export default function Technology({ setPage }) {
 
         <div className="future-grid">
           <FutureCard icon={Database} title="Integração com ERP" text="Conectar o inventário aos sistemas de gestão da empresa." />
-          <FutureCard icon={RadioTower} title="Tempo real" text="Atualização instantânea com WebSocket." />
+          <FutureCard icon={RadioTower} title="Painel ao vivo" text="Acompanhar o voo de outro computador, por WebSocket, sem esperar o fim da leitura." />
           <FutureCard icon={ShieldCheck} title="Auditoria de acesso" text="Ampliar o histórico de ações e a rastreabilidade das alterações." />
-          <FutureCard icon={ScanLine} title="Leitura otimizada" text="Recorte automático da área de leitura do drone." />
+          <FutureCard icon={MonitorDown} title="Linux e macOS" text="Instaladores para as demais plataformas; hoje o pacote é de Windows." />
           <FutureCard icon={Workflow} title="Análises comparativas" text="Comparar inventários e acompanhar divergências ao longo do tempo." />
           <FutureCard icon={BrainCircuit} title="IA operacional" text="Análise de divergências e padrões de estoque." />
         </div>

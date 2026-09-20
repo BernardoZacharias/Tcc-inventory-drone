@@ -128,3 +128,29 @@ select option:disabled { color: var(--muted); }
   .reveal { opacity: 1 !important; transform: none !important; filter: none !important; }
   .cursor-drone { display: none; }
 }
+
+/* Entrar no painel: caminho secundário.
+   O site passou a oferecer o aplicativo, mas quem já usa o Gestock pela
+   web precisa chegar ao login sem digitar a URL na mão. Link discreto,
+   e não botão, porque não é a ação que o site quer que você tome. */
+.navigation-dialog__entrar {
+  margin-top: 4px;
+  padding: 10px 2px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: color 160ms var(--ease-out);
+}
+
+.navigation-dialog__entrar:hover { color: var(--text); }
+
+.navigation-dialog__entrar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}

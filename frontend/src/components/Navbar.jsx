@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import Button from "./Button";
+import BotaoInstalador from "./BotaoInstalador";
 import ThemeToggle from "./ThemeToggle";
 import NavigationDialog from "./NavigationDialog";
 import logo from "../assets/logo-gestock.png";
@@ -55,7 +55,7 @@ export default function Navbar({ setPage, current = "home" }) {
 
         <div className="navbar-actions">
           <ThemeToggle />
-          <Button icon onClick={() => ir("login")}>Acessar sistema</Button>
+          <BotaoInstalador detalhe={false} />
 
           {/* Hambúrguer que morfa em X — as linhas giram, não somem */}
           <button
@@ -81,7 +81,14 @@ export default function Navbar({ setPage, current = "home" }) {
               </button>
             ))}
           </nav>
-          <Button icon onClick={() => ir("login")}>Acessar sistema</Button>
+          <BotaoInstalador />
+
+          {/* O painel web continua existindo para quem já usa o sistema;
+              ele só deixou de ser a chamada principal do site. Sem este
+              caminho, entrar exigiria digitar a URL na mão. */}
+          <button type="button" className="navigation-dialog__entrar" onClick={() => ir("login")}>
+            Já uso o Gestock — entrar no painel
+          </button>
       </NavigationDialog>
     </>
   );

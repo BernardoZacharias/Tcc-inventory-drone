@@ -274,3 +274,49 @@
     right: 18px;
   }
 }
+
+/* ── Escala de títulos das páginas institucionais ──────────────────
+   As quatro páginas cresceram em momentos diferentes e cada uma acabou
+   com a sua: a Home vinha em 800/75px, Sobre e Tecnologia em 400/82px,
+   Contato em 800/64px. Lado a lado pareciam de produtos diferentes —
+   era a mesma família tipográfica com pesos que não conversavam.
+
+   Uma escala só, aqui, porque este arquivo já existe para manter as
+   páginas institucionais coerentes entre si. */
+.hero h1,
+.about-hero h1,
+.technology-hero h1,
+.contact-hero h1 {
+  font-size: clamp(40px, 5.4vw, 74px);
+  font-weight: 800;
+  line-height: 1.03;
+  letter-spacing: -0.028em;
+}
+
+.section-title h2,
+.about-title h2,
+.about-tech-text h2,
+.technology-title h2,
+.technology-flow-text h2,
+.architecture-left h2,
+.contact-title h2,
+.tech-section h2,
+.final-cta h2 {
+  font-size: clamp(28px, 3.3vw, 42px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.022em;
+}
+
+/* Subtítulo de cartão: um degrau abaixo, e igual em todas as páginas. */
+.about-flow-card h3,
+.about-benefit h3,
+.tech-card h3,
+.flow-step h3,
+.architecture-item h3,
+.future-card h3,
+.contact-info h3 {
+  font-size: clamp(17px, 1.4vw, 19px);
+  font-weight: 700;
+  letter-spacing: -0.012em;
+}

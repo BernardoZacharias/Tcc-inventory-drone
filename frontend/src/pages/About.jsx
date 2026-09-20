@@ -6,13 +6,14 @@ import {
   Database,
   Drone,
   Eye,
-  Network,
+  HardDrive,
   QrCode,
   ShieldCheck,
   Warehouse
 } from "lucide-react";
 
 import Button from "../components/Button";
+import BotaoInstalador from "../components/BotaoInstalador";
 import Navbar from "../components/Navbar";
 import ScannerEffect from "../components/ScannerEffect";
 import "../styles/About.css";
@@ -42,13 +43,13 @@ export default function About({ setPage }) {
           </h1>
 
           <p>
-            O sistema foi desenvolvido para automatizar processos de inventário,
-            reduzir erros operacionais e permitir que diferentes empresas sejam
-            gerenciadas em uma única plataforma.
+            Um aplicativo que o operador instala no computador, leva até o
+            galpão e usa com o drone — inclusive onde não há internet. As
+            leituras sobem para o painel assim que a conexão volta.
           </p>
 
           <div className="about-actions">
-            <Button onClick={() => setPage("login")}>Acessar sistema</Button>
+            <BotaoInstalador />
             <Button variant="secondary" onClick={() => setPage("technology")}>
               Entender a tecnologia
             </Button>
@@ -72,8 +73,9 @@ export default function About({ setPage }) {
           <span className="tag">Como funciona</span>
           <h2>Do voo do drone até o painel de gestão</h2>
           <p>
-            A solução é dividida em módulos independentes, criando uma
-            arquitetura moderna, escalável e fácil de integrar com o front-end.
+            Para conversar com o drone, o computador entra na rede dele —
+            uma rede sem internet. Por isso a leitura é decidida e guardada
+            ali mesmo, e o envio para a nuvem vem depois.
           </p>
         </div>
 
@@ -86,20 +88,20 @@ export default function About({ setPage }) {
 
           <div className="about-flow-card">
             <Eye />
-            <h3>Visão Computacional</h3>
-            <p>O Python com OpenCV analisa a imagem e identifica QR Codes.</p>
+            <h3>Leitura na borda</h3>
+            <p>O Agent acha o QR no vídeo e só aceita o código depois de confirmá-lo em vários quadros.</p>
           </div>
 
           <div className="about-flow-card">
-            <Network />
-            <h3>API Node</h3>
-            <p>Recebe as leituras, organiza os dados e entrega para o sistema.</p>
+            <HardDrive />
+            <h3>Fila local</h3>
+            <p>Cada leitura é gravada no computador na hora, antes de qualquer tentativa de rede.</p>
           </div>
 
           <div className="about-flow-card">
             <Database />
-            <h3>Banco de Dados</h3>
-            <p>Armazena histórico, empresas, produtos e leituras realizadas.</p>
+            <h3>Painel na nuvem</h3>
+            <p>Quando há internet, a fila sobe sozinha e o inventário aparece para a equipe.</p>
           </div>
         </div>
       </section>
@@ -110,16 +112,16 @@ export default function About({ setPage }) {
           <h2>Arquitetura pensada para um sistema real</h2>
 
           <p>
-            Visão computacional, backend e interface trabalham em módulos
-            separados. As leituras são registradas no PostgreSQL e consultadas
-            no painel, com autenticação e organização por empresa. Essa base
-            permite evoluir cada etapa sem redesenhar toda a operação.
+            O aplicativo reúne painel, API e leitor num instalador só, mas
+            por dentro cada parte continua separada. O leitor roda junto do
+            drone, a API é dona das regras e o painel apenas apresenta —
+            o que permite trocar de modelo de drone mexendo num arquivo.
           </p>
 
           <div className="about-tech-list">
             <div>
               <Cpu />
-              <span>Python + OpenCV para leitura visual</span>
+              <span>Leitura feita no computador do operador, sem depender da nuvem</span>
             </div>
 
             <div>
@@ -129,7 +131,7 @@ export default function About({ setPage }) {
 
             <div>
               <ShieldCheck />
-              <span>API separada para controle e segurança</span>
+              <span>Fila local: nenhuma leitura se perde sem internet</span>
             </div>
 
             <div>
@@ -151,14 +153,14 @@ export default function About({ setPage }) {
         <div className="about-benefits-grid">
           <div className="about-benefit">
             <BrainCircuit />
-            <h3>Automação</h3>
-            <p>Reduz atividades manuais e aumenta a velocidade do inventário.</p>
+            <h3>Funciona sem sinal</h3>
+            <p>O galpão não precisa ter Wi-Fi. A leitura acontece no local e sincroniza depois.</p>
           </div>
 
           <div className="about-benefit">
             <ShieldCheck />
-            <h3>Menos erros</h3>
-            <p>Ajuda a evitar falhas de digitação, conferência e localização.</p>
+            <h3>Sem contagem dupla</h3>
+            <p>Passar duas vezes pela mesma etiqueta não duplica o item no inventário.</p>
           </div>
 
           <div className="about-benefit">

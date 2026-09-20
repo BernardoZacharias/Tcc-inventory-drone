@@ -7,6 +7,7 @@ import {
 
 import Navbar from "../components/Navbar";
 import Button from "../components/Button";
+import BotaoInstalador from "../components/BotaoInstalador";
 import ScannerEffect from "../components/ScannerEffect";
 import "../styles/Contact.css";
 import "../styles/PublicUX.css";
@@ -78,7 +79,7 @@ export default function Contact({ setPage }) {
           </p>
 
           <div className="contact-actions">
-            <Button onClick={() => setPage("login")}>Acessar sistema</Button>
+            <BotaoInstalador />
             <Button variant="secondary" onClick={() => setPage("technology")}>
               Ver tecnologia
             </Button>

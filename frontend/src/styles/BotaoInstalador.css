@@ -1,0 +1,36 @@
+/*
+ * BotaoInstalador.css — o botão de baixar e o aviso de plataforma.
+ *
+ * O botão reaproveita as classes `.button` do sistema para ficar
+ * idêntico aos demais; aqui só entra o que é próprio de um link que
+ * baixa arquivo: o alinhamento com a legenda embaixo.
+ */
+
+.baixar {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+/* `.button` é estilizado para <button>; como aqui é um link, o texto
+   herdaria a cor do <a> e a caixa viria menor. */
+.baixar__botao {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.baixar__detalhe {
+  padding-left: 2px;
+  color: var(--muted);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+}
+
+/* Em linha com outros botões, a legenda não pode empurrar o alinhamento. */
+.hero-actions .baixar,
+.about-actions .baixar,
+.technology-actions .baixar {
+  align-self: flex-start;
+}

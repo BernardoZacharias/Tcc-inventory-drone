@@ -1,4 +1,5 @@
 import "../styles/Home.css";
+import "../styles/DroneHero.css";
 import { motion } from "framer-motion";
 import { Boxes, BrainCircuit, QrCode, Radar, ShieldCheck } from "lucide-react";
 
@@ -7,6 +8,7 @@ import DroneAnimation from "../components/DroneAnimation";
 import ScannerEffect from "../components/ScannerEffect";
 import BenefitCard from "../components/BenefitCard";
 import Button from "../components/Button";
+import BotaoInstalador from "../components/BotaoInstalador";
 import { stagger, cardPop } from "../animations/motionVariants";
 
 const CLEAN_EASE = [0.22, 1, 0.36, 1];
@@ -55,14 +57,13 @@ export default function Home({ setPage }) {
             </h1>
 
             <p>
-              Um sistema moderno para leitura automatizada de estoque,
-              acompanhamento por empresa e integração com API em tempo real.
+              Um aplicativo que lê as etiquetas direto do vídeo do drone,
+              funciona mesmo sem internet no galpão e sincroniza o
+              inventário com o painel quando a conexão volta.
             </p>
 
             <div className="hero-actions">
-              <Button onClick={() => setPage("login")}>
-                Acessar Sistema
-              </Button>
+              <BotaoInstalador />
 
               <Button variant="secondary" onClick={() => setPage("technology")}>
                 Conhecer Tecnologia
