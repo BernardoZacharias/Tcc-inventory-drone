@@ -1,16 +1,18 @@
 /*
  * DroneHero.css — a cena do drone no topo da página inicial.
  *
- * REGRA QUE GOVERNA TUDO AQUI: nada de cor fixa. A cena inteira sai dos
- * tokens do sistema, então ela acompanha o tema em vez de brigar com
- * ele. A versão anterior tinha as cores cravadas para fundo escuro e
- * simplesmente sumia no tema claro.
+ * O VISOR ACOMPANHA O TEMA. Claro no tema claro, escuro no escuro —
+ * sem exceção, e tudo saindo dos tokens do sistema.
  *
- * A única cor própria é a do vidro do visor, e ela existe por um motivo
- * concreto: o drone da foto é BRANCO. Sobre uma página clara ele
- * desapareceria. O visor é sempre um pouco mais profundo que a página —
- * escuro no tema escuro, azulado no claro — e é o que garante contraste
- * nos dois modos sem precisar de duas artes.
+ * Uma tentativa anterior manteve o visor escuro nos dois temas, com a
+ * desculpa de dar contraste ao drone, que é branco. Estava errado: um
+ * painel escuro no meio de uma página branca não é "contraste", é uma
+ * peça que não pertence à página.
+ *
+ * O contraste do drone se resolve onde deve — na própria peça: sombra
+ * projetada pesada e um halo logo atrás dele. É o que um objeto claro
+ * sobre fundo claro precisa, e é o mesmo recurso que a fotografia de
+ * produto usa há décadas.
  */
 
 .palco-drone {
@@ -19,36 +21,23 @@
   --desl-x: 0px;
   --desl-y: 0px;
 
-  /* Vidro do visor: fundo próprio, derivado do tema mas sempre com
-     profundidade suficiente para o drone branco se destacar. */
-  --visor: linear-gradient(160deg, #0b1420 0%, #0a1017 55%, #070b11 100%);
-  --visor-brd: var(--line-2);
-  --visor-texto: rgba(226, 240, 252, 0.72);
-
   position: relative;
   aspect-ratio: 1 / 1;
   width: 100%;
   max-width: 560px;
   margin-inline: auto;
   padding: 20px;
-  border: 1px solid var(--visor-brd);
+  border: 1px solid var(--accent-line);
   border-radius: var(--radius-lg);
-  background: var(--visor);
-  box-shadow: var(--shadow-lg);
+  background:
+    radial-gradient(ellipse 60% 44% at 50% 30%, var(--accent-soft), transparent 72%),
+    var(--glass);
+  box-shadow:
+    inset 0 0 60px var(--accent-soft),
+    var(--shadow-soft);
   overflow: hidden;
   isolation: isolate;
   perspective: 1200px;
-}
-
-/* No tema claro o visor clareia, mas continua mais profundo que a
-   página — senão o drone branco se perde no branco do fundo. */
-[data-theme="light"] .palco-drone {
-  /* A faixa escura cobre onde o drone voa; a parte clara entra só no
-     rodapé, funcionando como o chão iluminado do galpão. */
-  --visor: linear-gradient(168deg, #16243a 0%, #1d3049 48%, #8fa6bf 84%, #dde7f1 100%);
-  --visor-brd: rgba(13, 27, 45, 0.16);
-  --visor-texto: rgba(13, 27, 45, 0.66);
-  box-shadow: var(--shadow-soft);
 }
 
 /* ── Fundo ─────────────────────────────────────────────────────── */
@@ -59,7 +48,7 @@
     linear-gradient(var(--accent-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--accent-line) 1px, transparent 1px);
   background-size: 46px 46px;
-  opacity: 0.22;
+  opacity: 0.4;
   transform: perspective(500px) rotateX(62deg) translateY(12%)
              translate3d(var(--desl-x), 0, 0);
   transform-origin: 50% 100%;
@@ -73,8 +62,8 @@
   inset: 0;
   background:
     radial-gradient(ellipse 52% 40% at 50% 38%,
-      color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
-  opacity: 0.55;
+      color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%);
+  opacity: 0.6;
 }
 
 /* ── HUD ───────────────────────────────────────────────────────── */
@@ -92,14 +81,12 @@
   font-size: 10.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  color: var(--muted);
 }
 
-/* O topo do visor é escuro nos DOIS temas — é lá que o drone voa. Então
-   o HUD de cima é sempre claro; só o rodapé, que fica sobre a parte
-   iluminada, acompanha o tema. Deixar os dois seguindo o tema fazia o
-   texto de cima sumir no modo claro. */
-.palco-drone__hud    { top: 18px;    color: rgba(226, 240, 252, 0.72); }
-.palco-drone__rodape { bottom: 18px; color: var(--visor-texto); }
+/* Os dois seguem o tema, porque o visor inteiro segue. */
+.palco-drone__hud    { top: 18px; }
+.palco-drone__rodape { bottom: 18px; }
 
 .palco-drone__marca,
 .palco-drone__estado {
@@ -120,7 +107,7 @@
 
 .palco-drone__estado {
   padding: 6px 12px;
-  border: 1px solid var(--visor-brd);
+  border: 1px solid var(--accent-line);
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
@@ -188,14 +175,39 @@
   top: 15%;
   width: 72%;
   translate: -50% 0;
+  isolation: isolate;
   animation: pd-pairar 7s ease-in-out infinite;
 }
 
+/* A sombra é o que descola o drone do fundo. No tema claro ela precisa
+   pesar bem mais: é ela, e não o fundo, que dá contorno a um objeto
+   branco sobre uma superfície clara. */
 .palco-drone__aeronave {
   display: block;
   width: 100%;
   height: auto;
-  filter: drop-shadow(0 26px 34px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 26px 30px rgba(6, 18, 32, 0.45));
+}
+
+[data-theme="light"] .palco-drone__aeronave {
+  filter:
+    drop-shadow(0 18px 20px rgba(13, 27, 45, 0.28))
+    drop-shadow(0 4px 6px rgba(13, 27, 45, 0.22));
+}
+
+/* Halo logo atrás da aeronave, só no tema claro. Fica ATRÁS (z-index
+   negativo) para escurecer o fundo sem lavar a imagem. */
+[data-theme="light"] .palco-drone__voo::before {
+  content: "";
+  position: absolute;
+  inset: -6% -10% -28%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 52%,
+    rgba(13, 27, 45, 0.16) 0%,
+    rgba(13, 27, 45, 0.07) 46%,
+    transparent 72%);
+  filter: blur(10px);
 }
 
 @keyframes pd-pairar {

@@ -24,6 +24,18 @@
   overflow: visible;
 }
 
+/* Contorno por cima da camada filtrada: dentro dela, uma borda de 1px
+   seria dissolvida pelo borrão. */
+.navbar-nav::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  pointer-events: none;
+}
+
 .nav-goo {
   position: absolute;
   inset: 0;
@@ -32,11 +44,22 @@
   filter: url(#gestock-goo);
 }
 
+/*
+ * O corpo da barra precisa ser OPACO, e isso não é escolha estética.
+ *
+ * O filtro multiplica o alfa por 19 e subtrai 9. Um fundo translúcido
+ * como `--surface-2` (alfa 0.05) vira 0.05 × 19 − 9 = negativo, ou
+ * seja: some por completo. Foi o que aconteceu — a barra desapareceu
+ * e sobrou a gota solta no ar, sem nada a que se fundir.
+ *
+ * A cor sai dos tokens e continua acompanhando o tema; o que muda é
+ * que ela é sólida.
+ */
 .nav-goo__barra {
   position: absolute;
   inset: 0;
   border-radius: var(--radius-full);
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-1));
 }
 
 /* A gota nasce dentro da barra e desce. Dois terços dela ficam para
@@ -44,7 +67,10 @@
 .nav-goo__gota {
   position: absolute;
   left: 0;
-  top: 58%;
+  /* Quanto mais a gota entra na barra, mais grosso fica o pescoço que
+     o filtro desenha entre as duas. Pouco demais e ela parece só uma
+     bolinha solta embaixo. */
+  top: 48%;
   width: 34px;
   height: 34px;
   border-radius: var(--radius-full);
@@ -73,7 +99,7 @@
 .nav-goo__icone {
   position: absolute;
   left: 0;
-  top: 58%;
+  top: 48%;
   z-index: 2;
   width: 34px;
   height: 34px;
