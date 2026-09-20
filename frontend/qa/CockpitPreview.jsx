@@ -58,6 +58,7 @@ export default function CockpitPreview() {
     estado,
     leituras: estado?.leituras || [],
     metricas: estado?.metricas || {},
+    registro: estado?.registro || {},
     vista,
     vistas: estado?.vistas || [],
     trocarVista: setVista,

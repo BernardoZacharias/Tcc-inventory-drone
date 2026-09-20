@@ -402,14 +402,6 @@
 
 .dc-vazio strong { color: var(--dc-ciano); font-weight: 600; }
 
-.dc-aviso {
-  padding: 11px 14px;
-  border-top: 1px solid var(--dc-linha);
-  background: rgba(251, 191, 36, 0.07);
-  color: rgba(251, 191, 36, 0.86);
-  font-size: 11px;
-  line-height: 1.55;
-}
 
 /* ── Telas estreitas ───────────────────────────────────────── */
 @media (max-width: 900px) {
@@ -430,17 +422,26 @@
   .dc-girando { animation: none; }
 }
 
-/* ── A mira ────────────────────────────────────────────────────
-   Some junto com o vídeo: a caixa tem a proporção do quadro, então o
-   SVG cobre exatamente a área da imagem e as coordenadas do Agent
-   valem sem conversão nenhuma. */
+/* ── O quadro e a mira ─────────────────────────────────────────
+   A CAIXA NUNCA MUDA DE TAMANHO: ela é sempre o visor inteiro. Quem
+   se ajusta são a imagem e o SVG, cada um por conta própria, com a
+   MESMA regra de encaixe — `object-fit: contain` para a imagem e o
+   `preserveAspectRatio` padrão para o SVG fazem exatamente a mesma
+   coisa: reduzem mantendo a proporção e centralizam.
+
+   Por isso os dois caem no mesmo retângulo sem ninguém calcular nada,
+   e a mira continua colada no código em qualquer tamanho de janela.
+
+   A tentativa anterior dava proporção à própria caixa. Parecia mais
+   direto e transbordava: com a altura limitada, o `aspect-ratio`
+   derivava uma largura maior que a coluna e o vídeo passava por cima
+   do painel de leituras. */
 .dc-quadro {
   position: relative;
-  max-width: 100%;
-  max-height: 100%;
-  /* Sem quadro ainda, ocupa o visor para o "esperando" ficar centrado */
   width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
 }
 
 .dc-quadro img {
@@ -461,7 +462,6 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-  overflow: visible;
 }
 
 /* O contorno é fino de propósito: ele delimita, não decora. */
@@ -668,4 +668,42 @@
 
 @media (prefers-reduced-motion: reduce) {
   .dc-clarao { animation: none; opacity: 0; }
+}
+
+/* ── Destino das leituras ──────────────────────────────────────
+   Pendente NÃO é erro: na Wi-Fi do drone não existe internet, então
+   esse é o estado normal do voo. Por isso âmbar (atenção), nunca
+   vermelho — um alerta aqui treinaria o operador a ignorar alertas. */
+.dc-registro {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--dc-linha);
+  color: var(--dc-fraco);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+.dc-registro svg { flex-shrink: 0; margin-top: 2px; }
+
+.dc-registro.ok {
+  background: rgba(74, 222, 128, 0.07);
+  color: rgba(134, 239, 172, 0.92);
+}
+
+.dc-registro.aguardando {
+  background: rgba(251, 191, 36, 0.07);
+  color: rgba(251, 191, 36, 0.9);
+}
+
+.dc-registro strong {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.dc-registro em {
+  font-style: normal;
+  opacity: 0.75;
 }

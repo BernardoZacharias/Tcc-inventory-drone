@@ -8,11 +8,15 @@ import { memo } from "react";
  * etiqueta para julgar se está limpa, torta ou rasgada. Então a mira
  * CONTORNA — os cantos ficam para fora do polígono, com folga.
  *
- * As coordenadas chegam do Agent no sistema do quadro original. Aqui
- * elas não são convertidas para pixels de tela: o <svg> recebe um
- * viewBox do tamanho do quadro e o CSS faz o resto. É o que mantém a
- * mira grudada no código quando a janela muda de tamanho, sem ouvinte
- * de resize e sem recalcular nada.
+ * As coordenadas chegam do Agent no sistema do quadro original e não
+ * são convertidas para pixels: o <svg> recebe um viewBox do tamanho do
+ * quadro e ocupa a mesma caixa da imagem.
+ *
+ * O encaixe é o que faz os dois coincidirem. O `preserveAspectRatio`
+ * padrão do SVG (`xMidYMid meet`) reduz mantendo a proporção e
+ * centraliza — exatamente o que `object-fit: contain` faz com a
+ * imagem. Mesma regra, mesmo retângulo, sem ouvinte de resize e sem
+ * recalcular nada.
  */
 
 /* Quanto o contorno se afasta do código, em fração do lado. */
@@ -98,7 +102,6 @@ function DroneMira({ alvos, largura, altura, procurando }) {
     <svg
       className="dm-camada"
       viewBox={`0 0 ${largura} ${altura}`}
-      preserveAspectRatio="none"
       aria-hidden="true"
     >
       {procurando && alvos.length === 0 && (

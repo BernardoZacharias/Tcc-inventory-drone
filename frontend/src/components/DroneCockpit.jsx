@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Radio, Wifi, WifiOff, Package, AlertTriangle,
   MapPin, Crosshair, Gauge, Layers, Loader2, Timer,
-  Volume2, VolumeX, Check
+  Volume2, VolumeX, Check, CloudOff
 } from "lucide-react";
 import DroneMira from "./DroneMira";
 import { beepLeituraNova } from "../utils/beep";
@@ -23,19 +23,60 @@ import "../styles/DroneCockpit.css";
  * é uma imagem de câmera: fundo claro em volta de vídeo cansa a vista
  * e falseia as cores do que está sendo inspecionado.
  *
- * O VÍDEO E A MIRA COMPARTILHAM UMA CAIXA COM A PROPORÇÃO DO QUADRO.
- * Isso não é detalhe de layout: é o que faz a mira ficar grudada no
- * código. Com `object-fit: contain` a imagem ganha tarjas pretas de
- * tamanho variável, e desenhar por cima exigiria recalcular a cada
- * mudança de janela. Dando à caixa o `aspect-ratio` do quadro, o
- * <svg> ocupa exatamente a área da imagem e as coordenadas do Agent
- * valem direto.
+ * O VÍDEO E A MIRA DIVIDEM UMA CAIXA DO TAMANHO DO VISOR, e cada um
+ * se encaixa nela pela mesma regra — `object-fit: contain` na imagem,
+ * `preserveAspectRatio` padrão no SVG. Como a regra é a mesma, os dois
+ * caem no mesmo retângulo e a mira fica colada no código sem ninguém
+ * medir nada.
  */
 
 const ESTADOS_OK = new Set(["STREAM_ATIVO", "LEITURA_ATIVA"]);
 
 /* "1 leituras" numa tela de produto é desleixo que se nota. */
 const plural = (n, singular, plural_) => (n === 1 ? singular : plural_);
+
+/*
+ * Onde as leituras desta sessão foram parar.
+ *
+ * Na Wi-Fi do drone não há internet, então ficar com leituras pendentes
+ * é o estado NORMAL do voo, não uma falha. O texto precisa dizer isso —
+ * um alerta vermelho aqui treinaria o operador a ignorar alertas.
+ */
+function Registro({ registro }) {
+  const { pendentes = 0, enviadas = 0, total = 0, erro_envio: erroEnvio } = registro || {};
+
+  if (!total) {
+    return (
+      <footer className="dc-registro">
+        As leituras são gravadas no computador assim que acontecem, e
+        sobem para o estoque quando houver internet.
+      </footer>
+    );
+  }
+
+  if (!pendentes) {
+    return (
+      <footer className="dc-registro ok">
+        <Check size={13} strokeWidth={2.5} aria-hidden="true" />
+        <span>
+          {enviadas} {plural(enviadas, "leitura registrada", "leituras registradas")} no estoque
+        </span>
+      </footer>
+    );
+  }
+
+  return (
+    <footer className="dc-registro aguardando">
+      <CloudOff size={13} strokeWidth={2} aria-hidden="true" />
+      <span>
+        <strong>{pendentes}</strong> {plural(pendentes, "leitura salva", "leituras salvas")} no
+        computador, {plural(pendentes, "aguardando", "aguardando")} internet para subir ao estoque.
+        {enviadas > 0 && ` ${enviadas} já ${plural(enviadas, "subiu", "subiram")}.`}
+        {erroEnvio && <em title={erroEnvio}> Nada foi perdido.</em>}
+      </span>
+    </footer>
+  );
+}
 
 function Metrica({ icone: Icone, valor, rotulo, destaque = false }) {
   return (
@@ -50,7 +91,7 @@ function Metrica({ icone: Icone, valor, rotulo, destaque = false }) {
 export default function DroneCockpit({ agente, onFechar, empresaNome }) {
   const {
     urlVideo, estado, leituras, metricas, erro, log,
-    vista, vistas, trocarVista,
+    vista, vistas, trocarVista, registro,
   } = agente;
 
   // O <img> do MJPEG só dispara onLoad quando o PRIMEIRO quadro chega.
@@ -201,12 +242,7 @@ export default function DroneCockpit({ agente, onFechar, empresaNome }) {
       {/* ── O vídeo ── */}
       <div className="dc-palco">
         <div className="dc-visor">
-          <div
-            className="dc-quadro"
-            style={largura && altura
-              ? { aspectRatio: `${largura} / ${altura}` }
-              : undefined}
-          >
+          <div className="dc-quadro">
             {urlVideo && (
               <img
                 src={urlVideo}
@@ -357,13 +393,10 @@ export default function DroneCockpit({ agente, onFechar, empresaNome }) {
             )}
           </div>
 
-          {/* Enquanto o marco 3 (fila offline) não existe, dizer isso em
-              voz alta evita que alguém termine um inventário achando que
-              ficou gravado. */}
-          <footer className="dc-aviso">
-            Sessão de leitura ao vivo. O envio automático para o estoque
-            entra no próximo marco — por ora, registre pelo botão “Manual”.
-          </footer>
+          {/* O destino de cada leitura, dito em voz alta: terminar um
+              inventário achando que ficou salvo seria o pior desfecho
+              possível desta tela. */}
+          <Registro registro={registro} />
         </aside>
       </div>
     </motion.div>

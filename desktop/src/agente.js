@@ -12,6 +12,7 @@
 const { spawn, spawnSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
+const { app } = require("electron");
 const { agente: dirAgente } = require("./paths");
 
 let processo = null;
@@ -124,6 +125,21 @@ function iniciar(opcoes = {}) {
     args.push("--qr");
     if (opcoes.upscale) args.push("--qr-upscale", String(opcoes.upscale));
     if (opcoes.confirmacoes) args.push("--qr-confirmacoes", String(opcoes.confirmacoes));
+
+    /*
+     * Onde a leitura é registrada.
+     *
+     * A fila fica em userData, e não na pasta do Agent: instalado, o
+     * aplicativo mora em Program Files, onde o usuário não tem
+     * permissão de escrita. Gravar lá funcionaria em desenvolvimento e
+     * falharia no computador do cliente — o pior tipo de bug.
+     */
+    args.push("--banco", path.join(app.getPath("userData"), "fila-leituras.db"));
+
+    if (opcoes.apiUrl) args.push("--api-url", opcoes.apiUrl);
+    if (opcoes.empresaId) args.push("--empresa-id", String(opcoes.empresaId));
+    if (opcoes.operadorId) args.push("--operador-id", String(opcoes.operadorId));
+    if (opcoes.setorId) args.push("--setor-id", String(opcoes.setorId));
   }
 
   ultimoEstado = { rodando: true, saida: [], erro: null, porta: null };

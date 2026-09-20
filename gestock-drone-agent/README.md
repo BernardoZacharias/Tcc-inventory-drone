@@ -3,11 +3,11 @@
 Agente local que conversa com o drone, processa o vídeo **na borda** e
 (mais tarde) sincroniza só os resultados com a nuvem.
 
-> **Marco atual: 2 de 5 — conexão, vídeo e leitura de QR.**
+> **Marco atual: 3 de 5 — vídeo, leitura de QR e registro no estoque.**
 > Faz: conectar → receber frames → monitorar → reconectar sozinho →
-> ler QR Codes com confirmação e sem repetição.
-> Ainda não faz: SQLite, API, WebSocket. As leituras saem no terminal.
-> É proposital — gravar leitura errada é pior que não gravar nada.
+> ler QR com confirmação e sem repetição → **gravar em fila local e
+> sincronizar com a API quando houver internet**.
+> Ainda não faz: comando vindo da nuvem (marco 4), empacotamento (5).
 
 ---
 
@@ -307,6 +307,53 @@ considerar `--qr-varredura 1`.
 
 ---
 
+## Onde a leitura é registrada
+
+```bash
+python -m src.main --driver flow-ufo --qr \
+    --api-url http://127.0.0.1:3000/api --empresa-id 1
+```
+
+### Por que existe uma fila local
+
+Para falar com o drone, o notebook entra na Wi-Fi **dele** — uma rede
+sem internet. Ou seja: no exato momento em que o sistema está fazendo o
+trabalho para o qual existe, o banco na nuvem está inalcançável.
+
+Mandar a leitura direto para a API significaria perdê-la. Então:
+
+```
+QR lido  →  SQLite local  →  (thread de envio)  →  API  →  Supabase
+            ↑ grava aqui
+              ANTES de qualquer rede
+```
+
+A fila é a fonte da verdade da sessão; o envio é um detalhe posterior.
+Sem internet, cada tentativa falha, a leitura **continua na fila** e o
+intervalo entre tentativas cresce (1s, 2s, 4s… até 30s). Quando a rede
+volta, a fila é drenada em ordem e o inventário aparece no painel.
+
+O rodapé mostra o resultado:
+
+```
+Registro: 12 enviada(s), 3 pendente(s) na fila local
+  As pendentes ficam em dados/fila.db e sobem sozinhas quando houver internet.
+```
+
+**Falha nunca descarta leitura.** É o oposto de uma fila de mensagens
+comum: aqui a leitura é o produto, e perder um item do inventário é pior
+que tentar mil vezes.
+
+**Sobre duplicatas:** se a API gravar e a resposta se perder no caminho,
+a leitura é reenviada e vira duas linhas. É o compromisso clássico desse
+tipo de fila, e é o lado certo de errar — um item repetido no relatório
+é visível e corrigível; um item perdido, não.
+
+Sem `--api-url`, o Agent ainda grava tudo na fila: nada se perde, só
+não sobe.
+
+---
+
 ## Testes
 
 Rodam em qualquer máquina, sem drone e sem câmera:
@@ -315,6 +362,7 @@ Rodam em qualquer máquina, sem drone e sem câmera:
 python tests/test_engine.py     # marco 1 — vídeo
 python tests/test_qr.py         # marco 2 — leitura
 python tests/test_servidor.py   # a ponte com o aplicativo
+python tests/test_fila.py       # marco 3 — a leitura não se perde
 ```
 
 O primeiro prova que o engine entrega frames, **sempre entrega o mais
@@ -347,6 +395,10 @@ decodificação está quebrada.
 | `--qr-varredura` | `2` | quantos tratamentos experimentar por quadro enquanto não há código à vista. `0` = todos (exaustivo e bem mais lento) |
 | `--qr-intervalo-cv2` | `5` | de quantos em quantos quadros sem achado tentar também o detector do OpenCV |
 | `--qr-vista` | — | publica também a imagem tratada: `CINZA`, `CLAHE`, `SHARP`, `OTSU`, `ADAPT`, `OTSU_INV` |
+| `--api-url` | — | onde registrar as leituras, ex.: `http://127.0.0.1:3000/api`. Sem isto elas só ficam na fila local |
+| `--empresa-id` | `EMPRESA_ID` | empresa dona das leituras |
+| `--operador-id` / `--setor-id` | — | opcionais, vão junto no registro |
+| `--banco` | `dados/fila.db` | arquivo da fila local |
 | `--servidor` | — | publica vídeo e estado em `127.0.0.1` para o aplicativo |
 | `--porta` | `8765` | porta do servidor local; anda para a seguinte se ocupada |
 | `--video-fps` | `15` | quadros por segundo enviados para a tela |
@@ -369,7 +421,14 @@ src/
 │   ├── flow_ufo.py         drone FLOW-UFO
 │   ├── rtsp_generic.py     qualquer RTSP
 │   └── local_sources.py    webcam, arquivo, sintético
-└── video/engine.py         mantém o stream vivo e no presente
+├── video/engine.py         mantém o stream vivo e no presente
+├── vision/
+│   ├── pipeline.py         variantes tratadas da imagem, sob demanda
+│   ├── qr_reader.py        quadros → leituras confirmadas e únicas
+│   └── parser.py           texto do QR → campos do produto
+├── storage/fila.py         a leitura salva ANTES de qualquer rede
+├── cloud/enviador.py       drena a fila para a API, em segundo plano
+└── server.py               vídeo e estado para a tela do aplicativo
 ```
 
 **A regra que sustenta tudo:** nada acima de `drivers/` sabe qual
@@ -412,7 +471,7 @@ STREAM_ATIVO → CONEXAO_PERDIDA → RECONECTANDO → STREAM_ATIVO
 |---|-------|----------|
 | 1 | Conexão, vídeo, reconexão | ✅ feito |
 | 2 | QR Engine + deduplicação | ✅ feito |
-| 3 | SQLite local + fila offline | a fazer |
+| 3 | SQLite local + fila offline | feito |
 | 4 | CloudClient (HTTP → depois WebSocket) | a fazer |
 | 5 | Empacotar `.exe` para Windows | a fazer |
 

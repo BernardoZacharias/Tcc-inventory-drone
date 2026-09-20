@@ -185,6 +185,11 @@ export default function useDroneAgent() {
     leituras: estado?.leituras || [],
     metricas: estado?.metricas || {},
 
+    // Quanto do inventário já subiu para o estoque, e quanto espera a
+    // rede. Na Wi-Fi do drone não há internet, então "pendente" é o
+    // estado NORMAL durante o voo — não um erro.
+    registro: estado?.registro || {},
+
     // A vista entra na URL do stream. Mudar a URL remonta a <img>, que
     // é exatamente o que se quer: a conexão anterior é encerrada e o
     // Agent para de produzir o tratamento que ninguém está olhando.

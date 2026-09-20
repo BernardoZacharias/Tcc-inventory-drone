@@ -25,6 +25,8 @@ Rodam em qualquer máquina, sem drone, sem câmera e sem internet.
 cd gestock-drone-agent
 .venv\Scripts\python tests\test_engine.py
 .venv\Scripts\python tests\test_qr.py
+.venv\Scripts\python tests\test_servidor.py
+.venv\Scripts\python tests\test_fila.py
 ```
 
 No Linux/macOS troque por `.venv/bin/python`.
@@ -42,6 +44,10 @@ O que eles provam:
 - **`test_servidor.py`** (19 testes) — a ponte com o aplicativo: o vídeo
   escuta **só** em `127.0.0.1`, o MJPEG carrega JPEG de verdade, e uma
   porta ocupada não derruba o Agent.
+- **`test_fila.py`** (10 testes) — a leitura não se perde: é gravada no
+  disco antes de qualquer rede, sobrevive a ficar **sem internet** (o
+  caso normal na Wi-Fi do drone), sobe sozinha e em ordem quando a rede
+  volta, e nunca é descartada por falha de envio.
 
 > O último é o que mais importa. Sem ele, os testes passariam numa
 > máquina onde a decodificação está quebrada — foi exatamente esse buraco
@@ -191,6 +197,17 @@ Se "Leitor do drone" ficar amarelo, o Python não foi encontrado — rode o
 script de instalação, que cria o `.venv` no lugar onde o app procura.
 
 ### A tela de voo
+
+Cada leitura é **gravada no computador na hora**, antes de qualquer
+tentativa de rede, e sobe para o estoque quando houver internet. O
+rodapé do painel de leituras diz onde elas estão:
+
+- verde — *"N leituras registradas no estoque"*
+- âmbar — *"N leituras salvas no computador, aguardando internet"*
+
+Na Wi-Fi do drone **não há internet**, então ficar em âmbar durante o
+voo é o esperado, não um erro. Ao sair para uma rede com internet, a
+fila esvazia sozinha e os itens aparecem no Dashboard.
 
 Ao ler um código, a tela **apita e mostra "QR Code lido"** com o nome do
 produto, e a moldura dá um clarão verde. O operador está olhando para a

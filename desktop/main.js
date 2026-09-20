@@ -97,7 +97,10 @@ ipcMain.handle("gestock:info", () => ({
   python: agente.acharPython(),
 }));
 
-ipcMain.handle("agente:iniciar", (_e, opcoes) => agente.iniciar(opcoes || {}));
+ipcMain.handle("agente:iniciar", (_e, opcoes) =>
+  // A URL da API é do processo principal, não do painel: o painel não
+  // tem por que saber em qual porta o Express acabou subindo.
+  agente.iniciar({ ...(opcoes || {}), apiUrl: urlApi ? `${urlApi}/api` : null }));
 ipcMain.handle("agente:parar", () => agente.parar());
 ipcMain.handle("agente:estado", () => agente.estado());
 

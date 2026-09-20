@@ -32,9 +32,11 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import signal
 import sys
 import time
+from pathlib import Path
 from typing import Optional
 
 # Permite rodar tanto como `python -m src.main` quanto `python src/main.py`
@@ -42,15 +44,19 @@ if __package__ in (None, ""):
     from pathlib import Path
 
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from src.cloud.enviador import Enviador
     from src.core.states import AgentState, StateMachine
     from src.drivers import build_driver
     from src.server import EstadoCompartilhado, ServidorLocal
+    from src.storage.fila import FilaLocal
     from src.video.engine import VideoEngine
     from src.vision.qr_reader import QrEngine
 else:
+    from .cloud.enviador import Enviador
     from .core.states import AgentState, StateMachine
     from .drivers import build_driver
     from .server import EstadoCompartilhado, ServidorLocal
+    from .storage.fila import FilaLocal
     from .video.engine import VideoEngine
     from .vision.qr_reader import QrEngine
 
@@ -206,6 +212,20 @@ def main(argv: Optional[list] = None) -> int:
     p.add_argument("--video-qualidade", type=int, default=80, metavar="Q",
                    help="qualidade do JPEG enviado, de 1 a 100 (padrão: 80)")
 
+    # ── registro no estoque (marco 3) ────────────────────────────
+    p.add_argument("--api-url", metavar="URL",
+                   help="onde gravar as leituras, ex.: http://127.0.0.1:3000/api . "
+                        "Sem isto o Agent apenas lê e não registra nada")
+    p.add_argument("--empresa-id", type=int, metavar="ID",
+                   help="empresa dona das leituras. Também pode vir na "
+                        "variável de ambiente EMPRESA_ID")
+    p.add_argument("--operador-id", type=int, metavar="ID")
+    p.add_argument("--setor-id", type=int, metavar="ID")
+    p.add_argument("--banco", metavar="ARQUIVO",
+                   help="arquivo da fila local (padrão: dados/fila.db na "
+                        "pasta do Agent). A leitura é gravada aqui ANTES de "
+                        "qualquer tentativa de rede")
+
     p.add_argument("--stall-timeout", type=float, default=5.0,
                    help="segundos sem frame válido até reconectar")
     p.add_argument("--max-reconnects", type=int, default=0,
@@ -251,6 +271,36 @@ def main(argv: Optional[list] = None) -> int:
             compartilhado, porta=args.porta,
             fps_video=args.video_fps, qualidade=args.video_qualidade,
         )
+
+    # ── fila local e envio ───────────────────────────────────────
+    #
+    # A fila existe sempre que há leitura de QR, mesmo sem --api-url:
+    # gravar primeiro é o que garante que nada se perde. O envio é que
+    # é opcional.
+    fila: Optional[FilaLocal] = None
+    enviador: Optional[Enviador] = None
+    empresa_id = args.empresa_id or (
+        int(os.environ["EMPRESA_ID"]) if os.environ.get("EMPRESA_ID", "").isdigit()
+        else None)
+
+    if qr is not None:
+        caminho = args.banco or (Path(__file__).resolve().parent.parent
+                                 / "dados" / "fila.db")
+        try:
+            fila = FilaLocal(caminho)
+            log.info("Fila local: %s", fila.caminho)
+        except Exception as exc:  # noqa: BLE001
+            log.error("Não consegui abrir a fila local (%s). As leituras vão "
+                      "aparecer na tela, mas NÃO serão registradas.", exc)
+
+        if fila is not None and args.api_url:
+            if empresa_id is None:
+                log.warning("Sem empresa definida: as leituras vão para a fila, "
+                            "mas a API pode recusá-las. Use --empresa-id.")
+            enviador = Enviador(fila, args.api_url)
+            enviador.iniciar()
+        elif fila is not None:
+            log.info("Sem --api-url: as leituras ficam só na fila local.")
 
     log.info("Gestock Drone Agent — conexão, vídeo e leitura de QR")
     log.info("Equipamento: %s", driver.describe())
@@ -350,6 +400,23 @@ def main(argv: Optional[list] = None) -> int:
                         for leitura in qr.processar(frame):
                             log.info("[QR %s] %s", leitura.estrategia,
                                      leitura.dados.resumo())
+
+                            # Grava ANTES de qualquer rede: é isto que
+                            # faz a leitura sobreviver à Wi-Fi do drone,
+                            # que não tem internet.
+                            if fila is not None:
+                                try:
+                                    fila.enfileirar(
+                                        leitura.codigo,
+                                        empresa_id=empresa_id,
+                                        operador_id=args.operador_id,
+                                        setor_id=args.setor_id,
+                                    )
+                                    if enviador is not None:
+                                        enviador.acordar()
+                                except Exception as exc:  # noqa: BLE001
+                                    log.error("Falha ao gravar na fila: %s", exc)
+
                             if compartilhado is not None:
                                 compartilhado.publicar_leitura(leitura)
                         # A mira acompanha o que está à VISTA, inclusive
@@ -383,8 +450,17 @@ def main(argv: Optional[list] = None) -> int:
                         metricas.update(qr.stats.resumo())
                     compartilhado.publicar_estado(
                         machine.state.value, machine.state.rotulo, metricas)
+
+                    if enviador is not None:
+                        compartilhado.publicar_registro(enviador.resumo())
+                    elif fila is not None:
+                        compartilhado.publicar_registro(fila.resumo())
     finally:
         engine.stop()
+        if enviador is not None:
+            # Uma última chance de esvaziar o que der antes de sair.
+            enviador.acordar()
+            enviador.parar(timeout=4.0)
         if servidor is not None:
             servidor.parar()
         if mostrar and cv2 is not None:
@@ -413,6 +489,17 @@ def main(argv: Optional[list] = None) -> int:
         for nome, e in sorted(vencedoras, key=lambda x: -x[1]["acertos"]):
             log.info("  %-9s %s acerto(s) em %s tentativa(s), %.1f ms cada",
                      nome, e["acertos"], e["tentativas"], e["ms_media"])
+        if fila is not None:
+            f = fila.resumo()
+            log.info("Registro: %s enviada(s), %s pendente(s) na fila local",
+                     f["enviadas"], f["pendentes"])
+            if f["pendentes"]:
+                log.info("  As pendentes ficam em %s e sobem sozinhas "
+                         "quando houver internet.", fila.caminho)
+            if f["ultimo_erro"]:
+                log.info("  Último erro de envio: %s", f["ultimo_erro"])
+            fila.fechar()
+
         for leitura in qr.leituras():
             repetida = qr.repeticoes(leitura.codigo)
             log.info("  - %s%s", leitura.dados.resumo(),

@@ -107,6 +107,9 @@ class EstadoCompartilhado:
         self._rotulo = "Desligado"
         self._metricas: dict = {}
         self._equipamento = ""
+        # Quanto do inventário já subiu para o estoque, e quanto espera
+        # a rede voltar. É isto que a tela mostra no rodapé.
+        self._registro: dict = {}
 
     # ── escrita (laço do Agent) ───────────────────────────────────
     def publicar_frame(self, frame: Any) -> None:
@@ -128,6 +131,10 @@ class EstadoCompartilhado:
             self._vista = imagem
             self._vista_de = nome
             self._vista_n += 1
+
+    def publicar_registro(self, resumo: dict) -> None:
+        with self._lock:
+            self._registro = dict(resumo)
 
     def publicar_alvos(self, alvos: List[dict]) -> None:
         with self._lock:
@@ -199,6 +206,7 @@ class EstadoCompartilhado:
                 "metricas": dict(self._metricas),
                 "leituras": list(reversed(self._leituras)),  # mais nova primeiro
                 "total": len(self._leituras),
+                "registro": dict(self._registro),
                 "alvos": list(self._alvos) if frescos else [],
                 "quadro": {"largura": largura, "altura": altura},
                 "vista": self._vista_pedida,

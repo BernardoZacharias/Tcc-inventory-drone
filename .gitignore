@@ -44,6 +44,7 @@ gestock-drone-agent/.venv/
 gestock-drone-agent/**/__pycache__/
 gestock-drone-agent/*.db
 gestock-drone-agent/*.sqlite3
+gestock-drone-agent/dados/
 gestock-drone-agent/etiquetas/
 
 # Aplicativo desktop (Electron)
