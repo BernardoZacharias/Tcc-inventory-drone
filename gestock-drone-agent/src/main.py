@@ -180,6 +180,17 @@ def main(argv: Optional[list] = None) -> int:
     p.add_argument("--qr-recorte", type=float, default=0.0, metavar="P",
                    help="ignora esta fração das bordas (ex.: 0.15). Foca no "
                         "centro do quadro e acelera a análise")
+    p.add_argument("--qr-varredura", type=int, default=2, metavar="V",
+                   help="quantos tratamentos de imagem experimentar por "
+                        "quadro enquanto NÃO há código à vista (padrão: 2). "
+                        "0 = todos, mais exaustivo e bem mais lento")
+    p.add_argument("--qr-intervalo-cv2", type=int, default=5, metavar="N",
+                   help="de quantos em quantos quadros sem achado tentar "
+                        "também o detector do OpenCV (padrão: 5)")
+    p.add_argument("--qr-vista", metavar="NOME",
+                   help="publica também a imagem tratada, para ver como o "
+                        "leitor enxerga: CINZA, CLAHE, SHARP, OTSU, ADAPT "
+                        "ou OTSU_INV")
 
     # ── servidor local (o aplicativo consome daqui) ──────────────
     p.add_argument("--servidor", action="store_true",
@@ -225,6 +236,9 @@ def main(argv: Optional[list] = None) -> int:
                 janela=args.qr_janela,
                 upscale=args.qr_upscale,
                 recorte=args.qr_recorte,
+                varredura=args.qr_varredura,
+                intervalo_cv2=args.qr_intervalo_cv2,
+                vista=(args.qr_vista or "").upper() or None,
             )
         except ValueError as exc:
             raise SystemExit(f"Configuração de QR inválida: {exc}")
@@ -242,8 +256,9 @@ def main(argv: Optional[list] = None) -> int:
     log.info("Equipamento: %s", driver.describe())
     if qr is not None:
         log.info("Leitura de QR ligada: %d confirmação(ões) em %d quadros, "
-                 "analisando até %.0f quadros/s",
-                 qr.confirmacoes, qr.janela, args.qr_fps)
+                 "analisando até %.0f quadros/s, varredura %s",
+                 qr.confirmacoes, qr.janela, args.qr_fps,
+                 qr.varredura or "completa")
 
     encerrar = {"pedido": False}
 
@@ -321,12 +336,33 @@ def main(argv: Optional[list] = None) -> int:
                     ultima_analise = agora
                     if machine.state is AgentState.STREAM_ATIVO:
                         machine.to(AgentState.LEITURA_ATIVA, "QR ligado")
+
+                    # Quem escolhe a vista é o operador, pela tela. O
+                    # servidor só anota o pedido; aplicar no motor é
+                    # aqui, na thread dona dele.
+                    if compartilhado is not None:
+                        pedida = compartilhado.vista_pedida
+                        if pedida != qr.vista:
+                            qr.vista = pedida
+                            log.info("Vista do leitor: %s", pedida or "câmera")
+
                     try:
                         for leitura in qr.processar(frame):
                             log.info("[QR %s] %s", leitura.estrategia,
                                      leitura.dados.resumo())
                             if compartilhado is not None:
                                 compartilhado.publicar_leitura(leitura)
+                        # A mira acompanha o que está à VISTA, inclusive
+                        # códigos já contados: ela mostra o que o drone
+                        # está vendo, não o que acabou de registrar.
+                        if compartilhado is not None:
+                            compartilhado.publicar_alvos(qr.alvos_serializaveis())
+                            # A vista sai daqui, e não junto do quadro da
+                            # câmera: ela só existe quando o leitor
+                            # analisa, num ritmo mais lento.
+                            if qr.vista:
+                                compartilhado.publicar_vista(
+                                    qr.imagem_vista, qr.vista)
                     except Exception as exc:  # noqa: BLE001 - visão não derruba o voo
                         log.warning("Falha ao analisar o quadro: %s", exc)
 
@@ -368,6 +404,15 @@ def main(argv: Optional[list] = None) -> int:
         log.info("Leitura: %s código(s) único(s) em %s quadros analisados "
                  "(%s repetições ignoradas)",
                  q["leituras"], q["quadros"], q["duplicados"])
+        log.info("Custo: %.2f tentativas e %.1f ms por quadro",
+                 q["tentativas_por_quadro"], q["ms_por_quadro"])
+
+        # Qual tratamento resolveu neste galpão. É com isto que o
+        # operador ajusta a configuração em vez de adivinhar.
+        vencedoras = [(n, e) for n, e in q["estrategias"].items() if e["acertos"]]
+        for nome, e in sorted(vencedoras, key=lambda x: -x[1]["acertos"]):
+            log.info("  %-9s %s acerto(s) em %s tentativa(s), %.1f ms cada",
+                     nome, e["acertos"], e["tentativas"], e["ms_media"])
         for leitura in qr.leituras():
             repetida = qr.repeticoes(leitura.codigo)
             log.info("  - %s%s", leitura.dados.resumo(),

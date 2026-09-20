@@ -50,11 +50,17 @@ export default function CockpitPreview() {
     return () => { cancelado = true; clearInterval(id); };
   }, [porta]);
 
+  // Espelha o que o useDroneAgent entrega, inclusive a troca de vista.
+  const [vista, setVista] = useState("ORIGINAL");
+
   const agente = {
-    urlVideo: `http://127.0.0.1:${porta}/video`,
+    urlVideo: `http://127.0.0.1:${porta}/video?vista=${encodeURIComponent(vista)}`,
     estado,
     leituras: estado?.leituras || [],
     metricas: estado?.metricas || {},
+    vista,
+    vistas: estado?.vistas || [],
+    trocarVista: setVista,
     erro,
     log: [],
   };

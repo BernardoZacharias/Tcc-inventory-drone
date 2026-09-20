@@ -262,6 +262,51 @@ número fixo faria abrir o app duas vezes virar um conflito.
 
 ---
 
+## Por que a leitura é rápida
+
+Medido nesta máquina, com um quadro 960x540 de corredor de galpão:
+
+| | antes | agora |
+|---|---|---|
+| quadro **sem** código (a maior parte do voo) | 486 ms | **64 ms** |
+| quadro **com** código | 46 ms | **18 ms** |
+
+O gasto real nunca foi filtrar a imagem — é **chamar o decodificador**.
+Cada tentativa custa muito mais que um threshold. As três otimizações
+atacam o número de tentativas, não o número de filtros.
+
+**1. Procurar só QR.** Por padrão o zbar varre atrás de tudo que
+conhece — EAN, UPC, CODE 39, CODE 128, ITF, PDF417, DataBar — passando
+cada decodificador por cada linha da imagem. Nosso sistema só usa QR:
+restringir deixou a decodificação **4 a 5 vezes mais rápida**. De
+quebra, calou a enxurrada de `Assertion failed` que o decodificador de
+PDF417 cuspia no log ao encontrar ruído.
+
+**2. Começar pelo tratamento que funcionou.** A iluminação de um galpão
+não muda a cada quadro: a variante que leu a etiqueta anterior quase
+sempre lê a próxima. Isso troca até 6 tentativas por 1 — e é o ganho no
+momento que importa, quando há um código na frente da câmera.
+
+**3. Varredura rotativa quando não há nada.** O quadro vazio é o mais
+comum e era o mais caro, porque percorria as seis variantes só para
+concluir que não havia nada. Agora cada quadro experimenta duas e o
+seguinte continua de onde parou; em três quadros cobre tudo. Como a
+aceitação já exige confirmação em múltiplos quadros, não se perde
+qualidade — só custo.
+
+O rodapé do Agent mostra quanto está custando de verdade:
+
+```
+Custo: 1.00 tentativas e 7.8 ms por quadro
+  CINZA     69 acerto(s) em 69 tentativa(s), 7.8 ms cada
+```
+
+`tentativas por quadro` perto de 1 significa que o leitor acertou a
+aposta. Muito acima disso, vale olhar qual variante está ganhando e
+considerar `--qr-varredura 1`.
+
+---
+
 ## Testes
 
 Rodam em qualquer máquina, sem drone e sem câmera:
@@ -299,6 +344,9 @@ decodificação está quebrada.
 | `--qr-fps` | `12` | quantos quadros por segundo analisar |
 | `--qr-upscale` | `1.0` | amplia antes de decodificar (use `2` para etiqueta pequena/longe) |
 | `--qr-recorte` | `0` | ignora as bordas (ex.: `0.15` foca no centro) |
+| `--qr-varredura` | `2` | quantos tratamentos experimentar por quadro enquanto não há código à vista. `0` = todos (exaustivo e bem mais lento) |
+| `--qr-intervalo-cv2` | `5` | de quantos em quantos quadros sem achado tentar também o detector do OpenCV |
+| `--qr-vista` | — | publica também a imagem tratada: `CINZA`, `CLAHE`, `SHARP`, `OTSU`, `ADAPT`, `OTSU_INV` |
 | `--servidor` | — | publica vídeo e estado em `127.0.0.1` para o aplicativo |
 | `--porta` | `8765` | porta do servidor local; anda para a seguinte se ocupada |
 | `--video-fps` | `15` | quadros por segundo enviados para a tela |

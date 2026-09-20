@@ -31,6 +31,16 @@ export default function useDroneAgent() {
   const [estado, setEstado] = useState(null);
   const [log, setLog] = useState([]);
 
+  /*
+   * Qual tratamento de imagem está sendo exibido.
+   *
+   * Trocar a vista é trocar a URL do <img>: o servidor entende a vista
+   * pedida pela própria query do stream. Guardar aqui, e não só no
+   * Agent, é o que faz o seletor responder na hora em vez de esperar o
+   * próximo ciclo de leitura do estado.
+   */
+  const [vista, setVista] = useState("ORIGINAL");
+
   const vivoRef = useRef(true);
   const rodandoRef = useRef(false);
   useEffect(() => { rodandoRef.current = rodando; }, [rodando]);
@@ -58,6 +68,7 @@ export default function useDroneAgent() {
     setRodando(false);
     setPorta(null);
     setEstado(null);
+    setVista("ORIGINAL");
   }, []);
 
   /** Inicia o Agent e espera o servidor local subir. */
@@ -173,7 +184,17 @@ export default function useDroneAgent() {
     estado,
     leituras: estado?.leituras || [],
     metricas: estado?.metricas || {},
-    urlVideo: porta ? `http://127.0.0.1:${porta}/video` : null,
+
+    // A vista entra na URL do stream. Mudar a URL remonta a <img>, que
+    // é exatamente o que se quer: a conexão anterior é encerrada e o
+    // Agent para de produzir o tratamento que ninguém está olhando.
+    vista,
+    vistas: estado?.vistas || [],
+    trocarVista: setVista,
+    urlVideo: porta
+      ? `http://127.0.0.1:${porta}/video?vista=${encodeURIComponent(vista)}`
+      : null,
+
     iniciar,
     parar,
     limparErro: () => setErro(""),

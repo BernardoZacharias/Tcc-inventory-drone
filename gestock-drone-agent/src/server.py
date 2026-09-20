@@ -9,10 +9,15 @@ A saída é um servidor HTTP local servindo **MJPEG**: o React mostra o
 vídeo com uma `<img src="http://127.0.0.1:porta/video">` comum, e o
 navegador decodifica sozinho. Sem codec, sem WebRTC, sem IPC de vídeo.
 
-    GET /video      stream MJPEG (multipart/x-mixed-replace)
-    GET /estado     JSON com estado, métricas e leituras
-    GET /leituras   JSON só com as leituras
-    GET /           página mínima para conferir fora do aplicativo
+    GET /video          stream MJPEG (multipart/x-mixed-replace)
+    GET /video?vista=X  a mesma cena, como o LEITOR a enxerga
+    GET /estado         JSON com estado, métricas, leituras e alvos
+    GET /leituras       JSON só com as leituras
+    GET /               página mínima para conferir fora do aplicativo
+
+A vista é o que permite ajustar a leitura olhando, em vez de no escuro:
+o operador vê a imagem binarizada, a de contraste local, a de realce de
+borda — e descobre qual tratamento revela a etiqueta no galpão dele.
 
 DUAS DECISÕES QUE NÃO SÃO DETALHE:
 
@@ -32,11 +37,19 @@ import os
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs
 from typing import Any, List, Optional
+
+from .vision.pipeline import ORDEM_PADRAO, ROTULOS
 
 log = logging.getLogger(__name__)
 
 LIMITE_LEITURAS = 200
+
+# Por quanto tempo uma mira continua valendo depois do último quadro em
+# que o código foi visto. Curto de propósito: a mira tem que acompanhar
+# a cena, não deixar rastro.
+VALIDADE_ALVO_S = 0.6
 
 
 class _Servidor(ThreadingHTTPServer):
@@ -71,6 +84,24 @@ class EstadoCompartilhado:
         self._lock = threading.Lock()
         self._frame: Optional[Any] = None
         self._frame_n = 0
+        # A vista tem contador PRÓPRIO, e não é capricho: a câmera
+        # publica a 25 quadros por segundo, enquanto o leitor analisa a
+        # 12. Com um contador só, o stream da vista reenviaria a mesma
+        # imagem tratada toda vez que um quadro novo da câmera chegasse
+        # — e, pior, continuaria servindo a vista ANTERIOR por um
+        # instante depois de o operador trocar de tratamento.
+        self._vista: Optional[Any] = None
+        self._vista_n = 0
+        self._vista_de: Optional[str] = None
+        # Onde os códigos estão AGORA, e o tamanho do quadro em que
+        # essas coordenadas fazem sentido. Sem o tamanho, a tela não
+        # consegue converter para os pixels em que o vídeo é exibido.
+        self._alvos: List[dict] = []
+        self._alvos_em = 0.0
+        self._dimensoes = (0, 0)
+        # Qual vista o operador pediu. Quem aplica é o laço do Agent:
+        # o servidor não mexe no motor de outra thread.
+        self._vista_pedida: Optional[str] = None
         self._leituras: List[dict] = []
         self._estado = "OFFLINE"
         self._rotulo = "Desligado"
@@ -82,6 +113,26 @@ class EstadoCompartilhado:
         with self._lock:
             self._frame = frame
             self._frame_n += 1
+            if hasattr(frame, "shape"):
+                self._dimensoes = (frame.shape[1], frame.shape[0])
+
+    def publicar_vista(self, imagem: Any, nome: Optional[str]) -> None:
+        """
+        A imagem tratada, junto com o NOME do tratamento que a produziu.
+
+        Guardar o nome é o que impede a tela de mostrar a vista antiga
+        logo depois de o operador trocar: o stream só entrega quando a
+        imagem já corresponde ao tratamento pedido.
+        """
+        with self._lock:
+            self._vista = imagem
+            self._vista_de = nome
+            self._vista_n += 1
+
+    def publicar_alvos(self, alvos: List[dict]) -> None:
+        with self._lock:
+            self._alvos = alvos
+            self._alvos_em = time.monotonic()
 
     def publicar_leitura(self, leitura) -> None:
         item = {
@@ -110,12 +161,37 @@ class EstadoCompartilhado:
                 self._equipamento = equipamento
 
     # ── leitura (threads HTTP) ────────────────────────────────────
-    def frame_atual(self):
+    def frame_atual(self, vista: Optional[str] = None):
+        """
+        O quadro a servir e seu número de sequência.
+
+        Pedindo uma vista, só devolve imagem quando ela FOI produzida
+        por aquele tratamento — enquanto o laço do Agent não alcança o
+        pedido, o stream espera em vez de mostrar a anterior.
+        """
         with self._lock:
-            return self._frame, self._frame_n
+            if vista is None:
+                return self._frame, self._frame_n
+            if self._vista_de != vista:
+                return None, self._vista_n
+            return self._vista, self._vista_n
+
+    @property
+    def vista_pedida(self) -> Optional[str]:
+        with self._lock:
+            return self._vista_pedida
+
+    def pedir_vista(self, nome: Optional[str]) -> None:
+        with self._lock:
+            self._vista_pedida = nome
 
     def snapshot(self) -> dict:
         with self._lock:
+            # Alvo velho é alvo que já saiu de cena. Sem prazo de
+            # validade, a mira ficaria parada no ar depois que o drone
+            # virasse para o outro lado.
+            frescos = (time.monotonic() - self._alvos_em) <= VALIDADE_ALVO_S
+            largura, altura = self._dimensoes
             return {
                 "estado": self._estado,
                 "rotulo": self._rotulo,
@@ -123,6 +199,13 @@ class EstadoCompartilhado:
                 "metricas": dict(self._metricas),
                 "leituras": list(reversed(self._leituras)),  # mais nova primeiro
                 "total": len(self._leituras),
+                "alvos": list(self._alvos) if frescos else [],
+                "quadro": {"largura": largura, "altura": altura},
+                "vista": self._vista_pedida,
+                "vistas": [
+                    {"id": nome, "rotulo": ROTULOS.get(nome, nome)}
+                    for nome in ["ORIGINAL"] + list(ORDEM_PADRAO)
+                ],
             }
 
     def leituras(self) -> List[dict]:
@@ -167,10 +250,21 @@ class _Manipulador(BaseHTTPRequestHandler):
         self.wfile.write(corpo)
 
     def do_GET(self) -> None:  # noqa: N802
-        caminho = self.path.split("?")[0].rstrip("/") or "/"
+        partes = self.path.split("?", 1)
+        caminho = partes[0].rstrip("/") or "/"
+        consulta = parse_qs(partes[1]) if len(partes) > 1 else {}
 
         if caminho == "/video":
-            self._stream()
+            pedida = (consulta.get("vista") or [None])[0]
+            if pedida:
+                pedida = pedida.upper()
+                if pedida not in ROTULOS:
+                    self._json({"erro": f"vista desconhecida: {pedida}"}, 400)
+                    return
+            # "ORIGINAL" é a câmera crua: nada para o motor produzir.
+            alvo = None if pedida in (None, "ORIGINAL") else pedida
+            self.estado.pedir_vista(alvo)
+            self._stream(vista=alvo)
         elif caminho == "/estado":
             self._json(self.estado.snapshot())
         elif caminho == "/leituras":
@@ -187,7 +281,7 @@ class _Manipulador(BaseHTTPRequestHandler):
         self.end_headers()
 
     # ── o stream ──────────────────────────────────────────────────
-    def _stream(self) -> None:
+    def _stream(self, vista: Optional[str] = None) -> None:
         """
         MJPEG: uma resposta que nunca termina, com um JPEG por parte.
 
@@ -209,7 +303,7 @@ class _Manipulador(BaseHTTPRequestHandler):
         try:
             while True:
                 inicio = time.monotonic()
-                frame, n = self.estado.frame_atual()
+                frame, n = self.estado.frame_atual(vista=vista)
 
                 if frame is not None and n != ultimo_n:
                     ultimo_n = n
@@ -239,9 +333,20 @@ class _Manipulador(BaseHTTPRequestHandler):
  h1{font-size:16px;font-weight:600;margin:0 0 16px}
  img{max-width:100%;border-radius:8px;border:1px solid #223}
  pre{background:#111722;padding:12px;border-radius:8px;overflow:auto}
+ select{background:#111722;color:#e6edf3;border:1px solid #223;padding:6px;border-radius:6px}
 </style>
 <h1>Gestock Drone - o que o Agent esta vendo</h1>
-<img src="/video" alt="video do drone">
+<p>Vista:
+<select onchange="document.getElementById('v').src='/video?vista='+this.value">
+  <option value="ORIGINAL">Camera</option>
+  <option value="CINZA">Preto e branco</option>
+  <option value="CLAHE">Contraste local</option>
+  <option value="SHARP">Realce de borda</option>
+  <option value="OTSU">Binarizada</option>
+  <option value="ADAPT">Binarizada por regiao</option>
+  <option value="OTSU_INV">Binarizada invertida</option>
+</select></p>
+<img id="v" src="/video" alt="video do drone">
 <pre id="e">carregando...</pre>
 <script>
 setInterval(async()=>{

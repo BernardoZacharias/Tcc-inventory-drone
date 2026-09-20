@@ -12,6 +12,9 @@ O que precisa ficar provado aqui:
   3. /video devolve MJPEG de verdade, com JPEG de verdade dentro.
   4. Porta ocupada não derruba o Agent: ele anda para a seguinte.
   5. O histórico de leituras não cresce sem limite.
+  6. Os alvos (a mira) saem com posição, tamanho do quadro e prazo de
+     validade — e somem quando o código sai de cena.
+  7. As vistas de diagnóstico são servidas e recusam nome inválido.
 """
 
 from __future__ import annotations
@@ -162,7 +165,7 @@ def test_rotas_respondem():
         assert status == 200 and len(json.loads(corpo)) == 1
 
         status, corpo, _ = _pegar(f"{base}/")
-        assert status == 200 and b"<img src=\"/video\"" in corpo
+        assert status == 200 and b"/video" in corpo
 
         try:
             _pegar(f"{base}/nao-existe")
@@ -246,6 +249,159 @@ def test_sem_frame_o_video_nao_quebra():
         req.close()
     finally:
         s.parar()
+
+
+# ── 3. alvos: a mira da tela ─────────────────────────────────────
+def test_alvo_sai_com_o_tamanho_do_quadro():
+    """
+    Sem as dimensões, a tela não consegue converter as coordenadas do
+    Agent para os pixels em que o vídeo é realmente exibido — a mira
+    cairia em qualquer lugar menos em cima do código.
+    """
+    try:
+        import numpy as np
+    except Exception as exc:  # noqa: BLE001
+        print(f"      (pulado: sem numpy — {exc})")
+        return
+
+    e = EstadoCompartilhado()
+    e.publicar_frame(np.zeros((360, 640, 3), dtype=np.uint8))
+    e.publicar_alvos([{"codigo": "A", "pontos": [[1, 2], [3, 4]],
+                       "estrategia": "OTSU", "registrado": False}])
+
+    snap = e.snapshot()
+    assert snap["quadro"] == {"largura": 640, "altura": 360}
+    assert snap["alvos"][0]["pontos"] == [[1, 2], [3, 4]]
+
+
+def test_alvo_vence_quando_o_codigo_sai_de_cena():
+    """Sem prazo, a mira ficaria parada no ar depois que o drone virasse."""
+    import src.server as servidor
+
+    e = EstadoCompartilhado()
+    e.publicar_alvos([{"codigo": "A", "pontos": [[0, 0]]}])
+    assert e.snapshot()["alvos"], "o alvo recém-publicado deveria valer"
+
+    # Envelhece o alvo sem esperar de verdade.
+    e._alvos_em -= servidor.VALIDADE_ALVO_S + 0.1
+    assert e.snapshot()["alvos"] == [], "alvo velho deveria ter sumido"
+
+
+def test_sem_alvo_nenhum_a_lista_vem_vazia():
+    e = EstadoCompartilhado()
+    assert e.snapshot()["alvos"] == []
+
+
+# ── 4. vistas de diagnóstico ─────────────────────────────────────
+def test_estado_anuncia_as_vistas_disponiveis():
+    """A tela monta o seletor a partir daqui, em vez de repetir a lista."""
+    from src.vision.pipeline import ORDEM_PADRAO
+
+    e = EstadoCompartilhado()
+    vistas = e.snapshot()["vistas"]
+    ids = [v["id"] for v in vistas]
+
+    assert ids == ["ORIGINAL"] + list(ORDEM_PADRAO)
+    assert all(v["rotulo"] and v["rotulo"] != v["id"] for v in vistas), \
+        "cada vista precisa de um nome legível para o operador"
+
+
+def test_pedir_vista_chega_ao_laco_do_agent():
+    """
+    O servidor NÃO mexe no motor: ele só registra o pedido, e o laço do
+    Agent aplica. Mexer no motor de outra thread seria corrida.
+    """
+    try:
+        import numpy as np
+    except Exception as exc:  # noqa: BLE001
+        print(f"      (pulado: sem numpy — {exc})")
+        return
+
+    e = EstadoCompartilhado()
+    s = ServidorLocal(e, porta=8806)
+    try:
+        porta = s.iniciar()
+        assert e.vista_pedida is None
+
+        # O stream fica aberto, então lemos só o início e fechamos.
+        req = urllib.request.urlopen(
+            f"http://127.0.0.1:{porta}/video?vista=OTSU", timeout=5)
+        time.sleep(0.2)
+        req.close()
+
+        assert e.vista_pedida == "OTSU"
+    finally:
+        s.parar()
+
+
+def test_vista_original_nao_faz_o_motor_trabalhar():
+    """Ver a câmera crua não pode custar processamento nenhum."""
+    e = EstadoCompartilhado()
+    s = ServidorLocal(e, porta=8807)
+    try:
+        porta = s.iniciar()
+        req = urllib.request.urlopen(
+            f"http://127.0.0.1:{porta}/video?vista=ORIGINAL", timeout=5)
+        time.sleep(0.2)
+        req.close()
+        assert e.vista_pedida is None
+    finally:
+        s.parar()
+
+
+def test_vista_desconhecida_e_recusada():
+    e = EstadoCompartilhado()
+    s = ServidorLocal(e, porta=8808)
+    try:
+        porta = s.iniciar()
+        try:
+            _pegar(f"http://127.0.0.1:{porta}/video?vista=SEPIA")
+            raise AssertionError("deveria recusar vista inexistente")
+        except urllib.error.HTTPError as erro:
+            assert erro.code == 400
+        assert e.vista_pedida is None
+    finally:
+        s.parar()
+
+
+def test_vista_so_e_servida_quando_corresponde_ao_pedido():
+    """
+    O caso que quebrava: a câmera publica a 25 quadros por segundo e o
+    leitor analisa a 12. Ao trocar de tratamento, o stream continuava
+    entregando a vista ANTERIOR por um instante — quem pedia "preto e
+    branco" via, por um momento, a binarizada.
+    """
+    e = EstadoCompartilhado()
+    e.publicar_frame("camera-1")
+    e.publicar_vista("imagem-otsu", "OTSU")
+
+    assert e.frame_atual()[0] == "camera-1"
+    assert e.frame_atual(vista="OTSU")[0] == "imagem-otsu"
+
+    # Operador troca para CINZA: nada é servido até o motor produzir.
+    assert e.frame_atual(vista="CINZA")[0] is None,         "não pode entregar a vista antiga com o nome da nova"
+
+    e.publicar_vista("imagem-cinza", "CINZA")
+    assert e.frame_atual(vista="CINZA")[0] == "imagem-cinza"
+
+
+def test_vista_tem_contador_proprio():
+    """
+    Com um contador só, cada quadro da câmera faria o stream da vista
+    reenviar a mesma imagem tratada — gastando CPU e banda à toa.
+    """
+    e = EstadoCompartilhado()
+    e.publicar_vista("t1", "OTSU")
+    _, v1 = e.frame_atual(vista="OTSU")
+
+    e.publicar_frame("c1")
+    e.publicar_frame("c2")
+    _, v2 = e.frame_atual(vista="OTSU")
+    assert v1 == v2, "quadro da câmera não pode avançar o contador da vista"
+
+    e.publicar_vista("t2", "OTSU")
+    _, v3 = e.frame_atual(vista="OTSU")
+    assert v3 > v2
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 vision — a camada que transforma imagem em informação.
 
     parser.py     texto do QR  →  campos do produto
+    pipeline.py   quadro       →  variantes tratadas da imagem
     qr_reader.py  quadros      →  leituras confirmadas e sem repetição
 
 Nada aqui fala com rede ou banco. O motor devolve leituras; quem grava
@@ -9,6 +10,11 @@ Nada aqui fala com rede ou banco. O motor devolve leituras; quem grava
 """
 
 from .parser import QrLido, parse_qr
-from .qr_reader import EstatisticasQr, Leitura, QrEngine
+from .pipeline import ORDEM_PADRAO, ROTULOS, Pipeline
+from .qr_reader import Achado, EstatisticasQr, Leitura, QrEngine, texto_do_qr
 
-__all__ = ["QrLido", "parse_qr", "QrEngine", "Leitura", "EstatisticasQr"]
+__all__ = [
+    "QrLido", "parse_qr",
+    "Pipeline", "ORDEM_PADRAO", "ROTULOS",
+    "QrEngine", "Achado", "Leitura", "EstatisticasQr", "texto_do_qr",
+]

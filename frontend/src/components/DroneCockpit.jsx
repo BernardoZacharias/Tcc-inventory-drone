@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Radio, Wifi, WifiOff, Package, AlertTriangle,
-  MapPin, Crosshair, Gauge, Layers, Loader2
+  MapPin, Crosshair, Gauge, Layers, Loader2, Timer,
+  Volume2, VolumeX, Check
 } from "lucide-react";
+import DroneMira from "./DroneMira";
+import { beepLeituraNova } from "../utils/beep";
 import "../styles/DroneCockpit.css";
 
 /*
@@ -19,6 +22,14 @@ import "../styles/DroneCockpit.css";
  * A tela é escura de propósito e NÃO acompanha o tema claro. O assunto
  * é uma imagem de câmera: fundo claro em volta de vídeo cansa a vista
  * e falseia as cores do que está sendo inspecionado.
+ *
+ * O VÍDEO E A MIRA COMPARTILHAM UMA CAIXA COM A PROPORÇÃO DO QUADRO.
+ * Isso não é detalhe de layout: é o que faz a mira ficar grudada no
+ * código. Com `object-fit: contain` a imagem ganha tarjas pretas de
+ * tamanho variável, e desenhar por cima exigiria recalcular a cada
+ * mudança de janela. Dando à caixa o `aspect-ratio` do quadro, o
+ * <svg> ocupa exatamente a área da imagem e as coordenadas do Agent
+ * valem direto.
  */
 
 const ESTADOS_OK = new Set(["STREAM_ATIVO", "LEITURA_ATIVA"]);
@@ -37,7 +48,10 @@ function Metrica({ icone: Icone, valor, rotulo, destaque = false }) {
 }
 
 export default function DroneCockpit({ agente, onFechar, empresaNome }) {
-  const { urlVideo, estado, leituras, metricas, erro, log } = agente;
+  const {
+    urlVideo, estado, leituras, metricas, erro, log,
+    vista, vistas, trocarVista,
+  } = agente;
 
   // O <img> do MJPEG só dispara onLoad quando o PRIMEIRO quadro chega.
   // Antes disso a tela fica preta, e é aí que o usuário acha que travou.
@@ -70,12 +84,54 @@ export default function DroneCockpit({ agente, onFechar, empresaNome }) {
     return () => window.removeEventListener("keydown", aoTeclar);
   }, [onFechar]);
 
+  /*
+   * O aviso de leitura: som e animação.
+   *
+   * O operador está olhando para a PRATELEIRA, não para a tela — ele
+   * precisa saber que leu sem desviar os olhos. Por isso o som vem
+   * primeiro e a animação é grande.
+   *
+   * A leitura nova é detectada durante a renderização (padrão do React
+   * para reagir a dado que mudou) e o som toca no efeito, porque tocar
+   * som é falar com um sistema externo, não calcular tela.
+   */
+  const [somLigado, setSomLigado] = useState(true);
+
+  // O ref existe para o efeito do anuncio ler o som SEM depender dele:
+  // com `somLigado` nas dependencias, desligar o som no meio de um
+  // anuncio faria o efeito rodar de novo e bipar outra vez.
+  const somRef = useRef(true);
+  useEffect(() => { somRef.current = somLigado; }, [somLigado]);
+
+  const maisNova = leituras[0];
+  const chaveNova = maisNova ? `${maisNova.codigo}@${maisNova.em}` : null;
+
+  const [ultimaAnunciada, setUltimaAnunciada] = useState(chaveNova);
+  const [anuncio, setAnuncio] = useState(null);
+
+  if (chaveNova !== ultimaAnunciada) {
+    setUltimaAnunciada(chaveNova);
+    if (chaveNova) setAnuncio({ ...maisNova, chave: chaveNova });
+  }
+
+  useEffect(() => {
+    if (!anuncio) return undefined;
+    if (somRef.current) beepLeituraNova();
+    const id = setTimeout(() => setAnuncio(null), 2400);
+    return () => clearTimeout(id);
+  }, [anuncio]);
+
   const conectado = ESTADOS_OK.has(estado?.estado);
   const rotulo = estado?.rotulo || "Conectando ao drone";
 
   const quadros = metricas.quadros ?? 0;
   const lidas = metricas.leituras ?? 0;
   const repetidas = metricas.duplicados ?? 0;
+  const msQuadro = metricas.ms_por_quadro;
+
+  const alvos = estado?.alvos || [];
+  const largura = estado?.quadro?.largura || 0;
+  const altura = estado?.quadro?.altura || 0;
 
   return (
     <motion.div
@@ -103,7 +159,38 @@ export default function DroneCockpit({ agente, onFechar, empresaNome }) {
           <Metrica icone={Layers} valor={quadros} rotulo={plural(quadros, "quadro", "quadros")} />
           <Metrica icone={Crosshair} valor={lidas} rotulo={plural(lidas, "leitura", "leituras")} destaque />
           <Metrica icone={Radio} valor={repetidas} rotulo={plural(repetidas, "repetida", "repetidas")} />
+          {msQuadro != null && (
+            <Metrica icone={Timer} valor={msQuadro} rotulo="ms/quadro" />
+          )}
         </div>
+
+        {/* Como o leitor enxerga. Trocar aqui é o que permite ajustar
+            olhando, em vez de no escuro. */}
+        {vistas?.length > 1 && (
+          <label className="dc-vista">
+            <span className="dc-vista-rotulo">Vista</span>
+            <select
+              value={vista || "ORIGINAL"}
+              onChange={(e) => trocarVista(e.target.value)}
+            >
+              {vistas.map((v) => (
+                <option key={v.id} value={v.id}>{v.rotulo}</option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        <button
+          className="dc-som"
+          onClick={() => setSomLigado((v) => !v)}
+          aria-pressed={somLigado}
+          aria-label={somLigado ? "Desligar o som das leituras" : "Ligar o som das leituras"}
+          title={somLigado ? "Som ligado" : "Som desligado"}
+        >
+          {somLigado
+            ? <Volume2 size={16} strokeWidth={1.75} />
+            : <VolumeX size={16} strokeWidth={1.75} />}
+        </button>
 
         <button className="dc-fechar" onClick={onFechar} aria-label="Encerrar leitura">
           <X size={18} strokeWidth={2} />
@@ -114,21 +201,68 @@ export default function DroneCockpit({ agente, onFechar, empresaNome }) {
       {/* ── O vídeo ── */}
       <div className="dc-palco">
         <div className="dc-visor">
-          {urlVideo && (
-            <img
-              src={urlVideo}
-              alt="Transmissão ao vivo da câmera do drone"
-              className={temVideo ? "pronto" : ""}
-              onLoad={() => { setTemVideo(true); setSemQuadros(false); }}
-            />
-          )}
+          <div
+            className="dc-quadro"
+            style={largura && altura
+              ? { aspectRatio: `${largura} / ${altura}` }
+              : undefined}
+          >
+            {urlVideo && (
+              <img
+                src={urlVideo}
+                alt="Transmissão ao vivo da câmera do drone"
+                className={temVideo ? "pronto" : ""}
+                onLoad={() => { setTemVideo(true); setSemQuadros(false); }}
+              />
+            )}
 
-          {/* Moldura de visor: cantos + varredura. Só enfeite, e por
+            {/* A mira. Contorna o código; nunca pinta por cima dele. */}
+            {temVideo && (
+              <DroneMira
+                alvos={alvos}
+                largura={largura}
+                altura={altura}
+                procurando={conectado}
+              />
+            )}
+
+            {/* Leitura confirmada: clarão curto + cartão. Fica na parte
+                de BAIXO do quadro, longe de onde a etiqueta costuma
+                estar, para não tapar o que acabou de ser lido. */}
+            <AnimatePresence>
+              {anuncio && (
+                <motion.div
+                  key={anuncio.chave}
+                  className="dc-anuncio"
+                  role="status"
+                  aria-live="polite"
+                  initial={{ opacity: 0, y: 28, scale: 0.94 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <span className="dc-anuncio-selo" aria-hidden="true">
+                    <Check size={20} strokeWidth={3} />
+                  </span>
+                  <div>
+                    <strong>QR Code lido</strong>
+                    <p>{anuncio.resumo || anuncio.codigo}</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {anuncio && (
+              <span key={`${anuncio.chave}-flash`} className="dc-clarao" aria-hidden="true" />
+            )}
+          </div>
+
+          {/* Moldura do visor: cantos + varredura. Só enfeite, e por
               isso escondida de quem usa leitor de tela. */}
           <div className="dc-moldura" aria-hidden="true">
             <span className="dc-canto ne" /><span className="dc-canto no" />
             <span className="dc-canto se" /><span className="dc-canto so" />
-            {conectado && <span className="dc-varredura" />}
+            {conectado && alvos.length === 0 && <span className="dc-varredura" />}
           </div>
 
           {!temVideo && (

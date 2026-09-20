@@ -36,10 +36,10 @@ O que eles provam:
 - **`test_engine.py`** (9 testes) — o vídeo chega, **sempre o quadro mais
   recente** (latência não acumula), reconecta sozinho quando a fonte cai,
   e sinaliza `ERRO` quando ela não volta.
-- **`test_qr.py`** (22 testes) — um código não é aceito com uma aparição
+- **`test_qr.py`** (31 testes) — um código não é aceito com uma aparição
   só, o mesmo código conta uma vez por sessão, e um QR **de verdade** é
   lido, inclusive escuro e borrado.
-- **`test_servidor.py`** (10 testes) — a ponte com o aplicativo: o vídeo
+- **`test_servidor.py`** (19 testes) — a ponte com o aplicativo: o vídeo
   escuta **só** em `127.0.0.1`, o MJPEG carrega JPEG de verdade, e uma
   porta ocupada não derruba o Agent.
 
@@ -191,6 +191,33 @@ Se "Leitor do drone" ficar amarelo, o Python não foi encontrado — rode o
 script de instalação, que cria o `.venv` no lugar onde o app procura.
 
 ### A tela de voo
+
+Ao ler um código, a tela **apita e mostra "QR Code lido"** com o nome do
+produto, e a moldura dá um clarão verde. O operador está olhando para a
+prateleira, não para o monitor — por isso o som vem primeiro. Dá para
+silenciar no botão de alto-falante da barra superior.
+
+A **mira** trava no código: quatro cantos contornando a etiqueta, com
+folga, sem nunca pintar por cima dela. Fica ciano enquanto confirma e
+**verde quando o código entra no inventário** — é assim que se
+distingue "achei" de "já contei".
+
+O seletor **Vista**, na barra superior, mostra a cena como o leitor a
+enxerga:
+
+| Vista | Para quê |
+|-------|----------|
+| Câmera | a imagem crua |
+| Preto e branco | o ponto de partida do leitor |
+| Contraste local | prateleira escura com um ponto de luz estourado |
+| Realce de borda | devolve a borda que o movimento borrou |
+| Binarizada | etiqueta impressa bem iluminada |
+| Binarizada por região | metade da etiqueta na sombra |
+| Binarizada invertida | etiqueta clara sobre fundo escuro |
+
+Se o código não está sendo lido, troque para as binarizadas: se a
+etiqueta aparecer suja, borrada ou estourada ali, o problema é de
+iluminação ou distância — não do leitor.
 
 Selecione a empresa e clique em **Iniciar leitura**. No aplicativo esse
 botão não dispara mais o scanner de tela: ele sobe o Agent do drone e

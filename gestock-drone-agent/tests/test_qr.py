@@ -25,7 +25,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.vision.parser import parse_qr  # noqa: E402
-from src.vision.qr_reader import QrEngine, texto_do_qr  # noqa: E402
+from src.vision.pipeline import ORDEM_PADRAO  # noqa: E402
+from src.vision.qr_reader import Achado, QrEngine, texto_do_qr  # noqa: E402
 
 ETIQUETA = ("PRODUTO ID: 12345 Nome: Teclado Logitech Quantidade: 50 "
             "Frágil: Não Empresa: Logitech Local: Corredor A - Prateleira 3")
@@ -91,7 +92,9 @@ class MotorFalso(QrEngine):
     def _decodificar(self, frame):
         vistos = self.roteiro[self.i] if self.i < len(self.roteiro) else []
         self.i += 1
-        return [(c, "FALSO") for c in vistos]
+        return [Achado(codigo=c, estrategia="FALSO",
+                       pontos=[(10, 10), (60, 10), (60, 60), (10, 60)])
+                for c in vistos]
 
 
 # ── 2. confirmação em múltiplos quadros ──────────────────────────
@@ -296,6 +299,186 @@ def test_frame_none_nao_quebra():
     m = QrEngine()
     assert m.processar(None) == []
     assert m.stats.quadros == 0
+
+
+# ── 6. posição do código (a mira da tela) ────────────────────────
+def test_alvo_traz_a_posicao_do_codigo():
+    """Sem os pontos, a tela não tem onde desenhar a mira."""
+    if not _tem_visao():
+        return
+
+    frame = _quadro_com_qr(ETIQUETA, lado=300)
+    m = QrEngine(confirmacoes=1, janela=2)
+    assert m.processar(frame)
+
+    alvos = m.alvos_serializaveis()
+    assert len(alvos) == 1
+    pontos = alvos[0]["pontos"]
+    assert len(pontos) >= 4, "esperava o polígono do código"
+
+    # O QR foi desenhado em x=240..540, y=90..390. Os cantos têm que
+    # cair dentro disso (o quiet zone deixa a leitura um pouco menor).
+    xs = [p[0] for p in pontos]
+    ys = [p[1] for p in pontos]
+    assert 240 <= min(xs) and max(xs) <= 540, f"x fora do QR: {xs}"
+    assert 90 <= min(ys) and max(ys) <= 390, f"y fora do QR: {ys}"
+
+
+def test_posicao_sobrevive_a_recorte_e_upscale():
+    """
+    A mira é desenhada sobre o quadro que o operador VÊ. Se os pontos
+    saíssem no sistema de coordenadas da imagem tratada, ligar
+    --qr-recorte ou --qr-upscale deslocaria a mira do código.
+    """
+    if not _tem_visao():
+        return
+
+    frame = _quadro_com_qr(ETIQUETA, lado=300)
+
+    def caixa(**kw):
+        m = QrEngine(confirmacoes=1, janela=2, **kw)
+        m.processar(frame)
+        alvos = m.alvos_serializaveis()
+        assert alvos, f"não leu com {kw}"
+        xs = [p[0] for p in alvos[0]["pontos"]]
+        ys = [p[1] for p in alvos[0]["pontos"]]
+        return min(xs), min(ys), max(xs), max(ys)
+
+    base = caixa()
+    for kw in ({"upscale": 2.0}, {"recorte": 0.1}, {"upscale": 2.0, "recorte": 0.1}):
+        outra = caixa(**kw)
+        for a, b in zip(base, outra):
+            assert abs(a - b) <= 4, f"mira deslocada com {kw}: {base} vs {outra}"
+
+
+def test_alvo_diz_se_ja_foi_registrado():
+    """A tela pinta diferente o que já entrou no inventário."""
+    m = MotorFalso([["A"], ["A"], ["A"]], confirmacoes=2, janela=4)
+    m.processar(object())
+    assert m.alvos_serializaveis()[0]["registrado"] is False
+    m.processar(object())
+    assert m.alvos_serializaveis()[0]["registrado"] is True
+
+
+# ── 7. velocidade ────────────────────────────────────────────────
+def test_varredura_limita_as_tentativas_por_quadro():
+    """
+    O quadro VAZIO é o mais comum e era o mais caro: percorria as seis
+    variantes para concluir que não há nada. Com a varredura rotativa
+    cada quadro experimenta só algumas.
+    """
+    if not _tem_visao():
+        return
+
+    import numpy as np
+
+    vazio = np.full((240, 320, 3), 90, dtype=np.uint8)
+
+    todas = QrEngine(varredura=0, intervalo_cv2=1)
+    limitada = QrEngine(varredura=2, intervalo_cv2=5)
+    for _ in range(5):
+        todas.processar(vazio)
+        limitada.processar(vazio)
+
+    a = todas.stats.resumo()["tentativas_por_quadro"]
+    b = limitada.stats.resumo()["tentativas_por_quadro"]
+    assert b < a, f"a varredura não reduziu nada: {b} vs {a}"
+    assert b <= 3, f"esperava no máximo 3 tentativas por quadro, veio {b}"
+
+
+def test_varredura_cobre_todas_as_variantes_ao_longo_dos_quadros():
+    """
+    Limitar por quadro só é seguro se, em poucos quadros, tudo tiver
+    sido experimentado. Senão uma etiqueta que só o ADAPT lê nunca
+    seria encontrada.
+    """
+    if not _tem_visao():
+        return
+
+    import numpy as np
+
+    vazio = np.full((240, 320, 3), 90, dtype=np.uint8)
+    m = QrEngine(varredura=2, intervalo_cv2=99)
+    for _ in range(len(ORDEM_PADRAO)):
+        m.processar(vazio)
+
+    tentadas = set(m.stats.resumo()["estrategias"]) - {"CV2"}
+    assert tentadas == set(ORDEM_PADRAO), (
+        f"não cobriu tudo: faltou {set(ORDEM_PADRAO) - tentadas}")
+
+
+def test_comeca_pela_variante_que_funcionou():
+    """
+    A iluminação do galpão não muda a cada quadro. Repetir a variante
+    vencedora troca várias tentativas por uma — é o ganho no quadro que
+    TEM código, que é o momento em que a resposta precisa ser rápida.
+    """
+    if not _tem_visao():
+        return
+
+    frame = _quadro_com_qr(ETIQUETA, lado=300)
+    m = QrEngine(confirmacoes=1, janela=2)
+
+    m.processar(frame)
+    tentativas_primeiro = m.stats.tentativas
+
+    for _ in range(4):
+        m.processar(frame)
+
+    # Depois do primeiro acerto, cada quadro deve custar UMA tentativa.
+    extras = m.stats.tentativas - tentativas_primeiro
+    assert extras == 4, f"esperava 1 tentativa por quadro, gastou {extras / 4}"
+
+
+def test_estatisticas_mostram_o_custo_de_cada_variante():
+    """É o que permite ao operador ajustar em vez de adivinhar."""
+    if not _tem_visao():
+        return
+
+    frame = _quadro_com_qr(ETIQUETA, lado=300)
+    m = QrEngine(confirmacoes=1, janela=2)
+    m.processar(frame)
+
+    resumo = m.stats.resumo()
+    assert resumo["tentativas_por_quadro"] > 0
+    assert resumo["ms_por_quadro"] > 0
+    vencedora = resumo["estrategias"]
+    assert any(e["acertos"] > 0 for e in vencedora.values())
+
+
+# ── 8. vista de diagnóstico ──────────────────────────────────────
+def test_vista_entrega_a_imagem_tratada():
+    """As telas em preto e branco que o operador usa para ajustar."""
+    if not _tem_visao():
+        return
+
+    frame = _quadro_com_qr(ETIQUETA, lado=300)
+
+    sem = QrEngine(confirmacoes=1, janela=2)
+    sem.processar(frame)
+    assert sem.imagem_vista is None, "sem vista pedida não se gasta nada"
+
+    for nome in ORDEM_PADRAO:
+        m = QrEngine(confirmacoes=1, janela=2, vista=nome)
+        m.processar(frame)
+        assert m.imagem_vista is not None, f"vista {nome} não foi produzida"
+        assert m.imagem_vista.shape[:2] == frame.shape[:2], \
+            f"vista {nome} saiu com tamanho diferente do quadro"
+
+
+def test_vista_sai_mesmo_quando_a_leitura_acerta_antes():
+    """
+    O leitor para na primeira variante que lê. A vista pedida precisa
+    ser produzida mesmo assim, senão escolher OTSU na tela mostraria
+    tela preta sempre que o CINZA resolvesse primeiro.
+    """
+    if not _tem_visao():
+        return
+
+    frame = _quadro_com_qr(ETIQUETA, lado=300)
+    m = QrEngine(confirmacoes=1, janela=2, vista="OTSU_INV")
+    assert m.processar(frame), "o teste depende de a leitura acertar"
+    assert m.imagem_vista is not None
 
 
 if __name__ == "__main__":
