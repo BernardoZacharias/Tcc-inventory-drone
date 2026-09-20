@@ -97,7 +97,7 @@ export default function Contact({ setPage }) {
       </section>
 
       <section className="contact-section">
-        <div className="contact-title">
+        <div className="contact-title reveal">
           <span className="tag">Solicitar demonstração</span>
           <h2 id="contact-form-title">Vamos conversar sobre sua operação</h2>
           <p>Prepare sua mensagem ou escolha um dos canais de atendimento.</p>
@@ -180,7 +180,7 @@ export default function Contact({ setPage }) {
           </motion.form>
 
           <motion.div
-            className="contact-info"
+            className="contact-info reveal-dir"
             initial={{ opacity: 0, x: 14 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}

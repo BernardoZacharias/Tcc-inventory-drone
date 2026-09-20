@@ -1,0 +1,103 @@
+/*
+ * ScrollFX.css — o que a página faz enquanto é rolada.
+ *
+ * O sistema de revelação já existia neste projeto, mas NENHUMA página
+ * usava a classe: o observer rodava e não encontrava alvo. Por isso o
+ * site parecia estático apesar do código estar lá. Aqui o `.reveal`
+ * ganha direções, e as páginas passam a usá-lo de fato.
+ *
+ * Tudo anima `transform`, `opacity` e `filter` — propriedades que o
+ * compositor resolve sozinho. Nenhum efeito daqui provoca layout.
+ */
+
+/* ── Barra de leitura ──────────────────────────────────────────── */
+/* Fina, no topo, mostrando quanto da página já passou. Some quando a
+   página é curta demais para valer a informação. */
+.barra-leitura {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 300;
+  pointer-events: none;
+  transform-origin: 0 50%;
+  scale: var(--lido, 0) 1;
+  background: linear-gradient(90deg,
+    var(--accent), color-mix(in srgb, var(--accent) 55%, var(--violet)));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, transparent);
+  transition: opacity 240ms ease;
+}
+
+/* ── Paralaxe ──────────────────────────────────────────────────── */
+/* O elemento anda um pouco contra a rolagem. `--pxy` vem do hook. */
+[data-paralaxe] {
+  translate: 0 var(--pxy, 0px);
+  will-change: translate;
+}
+
+/* ── Revelação direcional ──────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal-esq,
+  .reveal-dir,
+  .reveal-zoom {
+    opacity: 0;
+    transition:
+      opacity 820ms var(--ease-fluid),
+      transform 820ms var(--ease-fluid),
+      filter 820ms var(--ease-fluid);
+    will-change: transform, opacity;
+  }
+
+  .reveal-esq  { transform: translateX(-46px); filter: blur(6px); }
+  .reveal-dir  { transform: translateX(46px);  filter: blur(6px); }
+  /* Cresce de dentro: bom para cartões e imagens, ruim para texto
+     corrido, que fica borrado durante o caminho. */
+  .reveal-zoom { transform: scale(0.94);       filter: blur(4px); }
+
+  .reveal-esq.is-in,
+  .reveal-dir.is-in,
+  .reveal-zoom.is-in {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+    will-change: auto;
+  }
+
+  /* Escalonamento em grade: cada filho entra um instante depois do
+     anterior, o que lê como "a lista se montando" em vez de "tudo
+     apareceu". O atraso para no oitavo — além disso o último cartão
+     demoraria tanto que pareceria travado. */
+  .escalonar > * {
+    opacity: 0;
+    transform: translateY(26px);
+    transition:
+      opacity 640ms var(--ease-out),
+      transform 640ms var(--ease-out);
+  }
+
+  .escalonar.is-in > * { opacity: 1; transform: none; }
+
+  .escalonar.is-in > *:nth-child(1) { transition-delay: 0ms; }
+  .escalonar.is-in > *:nth-child(2) { transition-delay: 70ms; }
+  .escalonar.is-in > *:nth-child(3) { transition-delay: 140ms; }
+  .escalonar.is-in > *:nth-child(4) { transition-delay: 210ms; }
+  .escalonar.is-in > *:nth-child(5) { transition-delay: 280ms; }
+  .escalonar.is-in > *:nth-child(6) { transition-delay: 350ms; }
+  .escalonar.is-in > *:nth-child(7) { transition-delay: 420ms; }
+  .escalonar.is-in > *:nth-child(n + 8) { transition-delay: 490ms; }
+}
+
+/* Movimento reduzido: o conteúdo aparece, sem viagem. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-esq,
+  .reveal-dir,
+  .reveal-zoom,
+  .escalonar > * {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  [data-paralaxe] { translate: none; }
+  .barra-leitura { display: none; }
+}

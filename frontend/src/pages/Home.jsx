@@ -1,7 +1,7 @@
 import "../styles/Home.css";
 import "../styles/DroneHero.css";
 import { motion } from "framer-motion";
-import { Boxes, BrainCircuit, QrCode, Radar, ShieldCheck } from "lucide-react";
+import { Boxes, QrCode, Radar, ShieldCheck } from "lucide-react";
 
 import Navbar from "../components/Navbar";
 import DroneAnimation from "../components/DroneAnimation";
@@ -72,7 +72,7 @@ export default function Home({ setPage }) {
           </motion.div>
 
           <motion.div
-            className="hero-visual"
+            className="hero-visual" data-paralaxe="26"
             variants={cleanScaleIn}
             initial="hidden"
             animate="visible"
@@ -85,7 +85,7 @@ export default function Home({ setPage }) {
       {/* ── BENEFÍCIOS ── */}
       <section className="section">
         <motion.div
-          className="section-title"
+          className="section-title reveal"
           variants={cleanFadeUp}
           initial="hidden"
           whileInView="visible"
@@ -100,7 +100,7 @@ export default function Home({ setPage }) {
         </motion.div>
 
         <motion.div
-          className="benefits-grid"
+          className="benefits-grid escalonar"
           variants={stagger}
           initial="hidden"
           whileInView="visible"
@@ -140,7 +140,7 @@ export default function Home({ setPage }) {
       {/* ── TECNOLOGIA / ARQUITETURA ── */}
       <section className="tech-section">
         <motion.div
-          className="tech-text"
+          className="tech-text reveal-esq"
           variants={cleanFadeLeft}
           initial="hidden"
           whileInView="visible"
@@ -153,7 +153,7 @@ export default function Home({ setPage }) {
             registra as leituras e o front-end apresenta os dados por empresa.
           </p>
 
-          <div className="flow">
+          <div className="flow escalonar">
             <div>Drone</div>
             <div>Python + OpenCV</div>
             <div>API Node</div>
@@ -175,19 +175,18 @@ export default function Home({ setPage }) {
       <section className="final-cta">
         <div className="final-cta-bg" />
         <motion.div
-          className="final-cta-inner"
+          className="final-cta-inner reveal"
           variants={cleanFadeUp}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
         >
-          <BrainCircuit size={42} />
           <h2>Transforme inventário em inteligência operacional</h2>
           <p>
-            Controle leituras, empresas e operações em uma interface moderna e
-            preparada para expansão.
+            Instale o aplicativo, conecte o drone e comece a contar. O painel
+            recebe as leituras assim que houver internet.
           </p>
-          <Button onClick={() => setPage("login")}>Entrar no sistema</Button>
+          <BotaoInstalador />
         </motion.div>
       </section>
     </main>

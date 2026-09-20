@@ -75,9 +75,18 @@ export default function DroneAnimation() {
 
         <div className="palco-drone__voo">
           <img className="palco-drone__aeronave" src={drone} alt="" />
-          {/* O feixe sai da câmera, embaixo do drone */}
-          <span className="palco-drone__feixe" />
         </div>
+
+        {/*
+          O feixe NÃO fica dentro do drone flutuante, e isso é
+          deliberado: preso a ele, o comprimento vinha da altura da
+          imagem e passava direto pela etiqueta, saindo pela borda de
+          baixo do visor. Aqui o topo fica na câmera e a base trava no
+          topo da etiqueta, que é como um gimbal estabilizado se
+          comporta — o drone balança, a mira não sai do alvo.
+        */}
+        <span className="palco-drone__feixe" />
+        <span className="palco-drone__poca" />
 
         {/* A etiqueta que está sendo lida */}
         <div className="palco-drone__etiqueta">

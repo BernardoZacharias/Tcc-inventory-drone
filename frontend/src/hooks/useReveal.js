@@ -12,7 +12,12 @@ import { useEffect } from "react";
  */
 export default function useReveal(chave) {
   useEffect(() => {
-    const alvos = document.querySelectorAll(".reveal:not(.is-in)");
+    // As variantes direcionais e a grade escalonada entram pelo mesmo
+    // observer: um só, em vez de um por efeito.
+    const alvos = document.querySelectorAll(
+      ".reveal:not(.is-in), .reveal-esq:not(.is-in), .reveal-dir:not(.is-in), " +
+      ".reveal-zoom:not(.is-in), .escalonar:not(.is-in)"
+    );
     if (!alvos.length) return;
 
     // Sem suporte ou com movimento reduzido: mostra tudo direto.
@@ -38,6 +43,41 @@ export default function useReveal(chave) {
     );
 
     alvos.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
+
+    /*
+     * O que já está na tela é revelado NA HORA, sem esperar o observer.
+     *
+     * O IntersectionObserver só entrega durante as etapas de renderização
+     * do navegador, e elas são suspensas em aba oculta ou em segundo
+     * plano. Quem abre a página nessa condição veria o conteúdo do topo
+     * em branco até voltar para a aba.
+     */
+    const naTela = (el) => {
+      const c = el.getBoundingClientRect();
+      return c.top < window.innerHeight * 0.88 && c.bottom > 0;
+    };
+    alvos.forEach((el) => {
+      if (naTela(el)) {
+        el.classList.add("is-in");
+        obs.unobserve(el);
+      }
+    });
+
+    /*
+     * Rede de segurança: nada fica escondido para sempre.
+     *
+     * A revelação é um enfeite; o conteúdo é o produto. Se o observer
+     * não entregar — aba em segundo plano, navegador exótico, extensão
+     * atrapalhando — o texto tem que aparecer assim mesmo. Um efeito
+     * que falha e leva a página junto é pior que não ter efeito.
+     */
+    const salvaVidas = setTimeout(() => {
+      alvos.forEach((el) => el.classList.add("is-in"));
+    }, 2600);
+
+    return () => {
+      clearTimeout(salvaVidas);
+      obs.disconnect();
+    };
   }, [chave]);
 }

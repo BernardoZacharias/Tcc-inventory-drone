@@ -57,7 +57,7 @@ export default function About({ setPage }) {
         </motion.div>
 
         <motion.div
-          className="about-drone-card"
+          className="about-drone-card" data-paralaxe="30"
           aria-hidden="true"
           initial={{ opacity: 0, y: 14, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -69,7 +69,7 @@ export default function About({ setPage }) {
       </section>
 
       <section className="about-section">
-        <div className="about-title">
+        <div className="about-title reveal">
           <span className="tag">Como funciona</span>
           <h2>Do voo do drone até o painel de gestão</h2>
           <p>
@@ -79,7 +79,7 @@ export default function About({ setPage }) {
           </p>
         </div>
 
-        <div className="about-flow">
+        <div className="about-flow escalonar">
           <div className="about-flow-card">
             <Drone />
             <h3>Drone</h3>
@@ -107,7 +107,7 @@ export default function About({ setPage }) {
       </section>
 
       <section className="about-tech">
-        <div className="about-tech-text">
+        <div className="about-tech-text reveal-esq">
           <span className="tag">Tecnologia aplicada</span>
           <h2>Arquitetura pensada para um sistema real</h2>
 
@@ -145,12 +145,12 @@ export default function About({ setPage }) {
       </section>
 
       <section className="about-benefits">
-        <div className="about-title">
+        <div className="about-title reveal">
           <span className="tag">Benefícios</span>
           <h2>Por que essa solução é importante?</h2>
         </div>
 
-        <div className="about-benefits-grid">
+        <div className="about-benefits-grid escalonar">
           <div className="about-benefit">
             <BrainCircuit />
             <h3>Funciona sem sinal</h3>

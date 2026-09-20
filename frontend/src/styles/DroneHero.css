@@ -150,7 +150,7 @@
 .palco-drone__anel {
   position: absolute;
   left: 50%;
-  top: 62%;
+  top: 74%;
   border: 1px solid var(--accent-line);
   border-radius: var(--radius-full);
   translate: -50% -50%;
@@ -180,11 +180,13 @@
 }
 
 /* ── O drone ───────────────────────────────────────────────────── */
+/* Mais alto e um pouco menor que antes, para abrir espaço entre a
+   câmera e a etiqueta — sem esse vão, o feixe não tem onde existir. */
 .palco-drone__voo {
   position: absolute;
   left: 50%;
-  top: 27%;
-  width: 78%;
+  top: 15%;
+  width: 72%;
   translate: -50% 0;
   animation: pd-pairar 7s ease-in-out infinite;
 }
@@ -201,57 +203,83 @@
   50%      { transform: translateY(-14px) rotate(0.6deg); }
 }
 
-/* Feixe da câmera até a etiqueta. Sai de baixo do drone, estreito em
-   cima e aberto embaixo — é um cone visto de frente. */
+/* Feixe da câmera até a etiqueta: estreito em cima, aberto embaixo.
+   `top` e `bottom` são fixos no palco, então ele COMEÇA na câmera e
+   TERMINA na etiqueta — não sobra nem falta. */
 .palco-drone__feixe {
   position: absolute;
   left: 50%;
-  top: 74%;
-  width: 40%;
-  height: 128%;
+  top: 50%;
+  bottom: 32%;
+  width: 34%;
   translate: -50% 0;
   background: linear-gradient(to bottom,
-    color-mix(in srgb, var(--accent) 55%, transparent), transparent 82%);
-  clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
-  filter: blur(1px);
-  opacity: 0.6;
+    color-mix(in srgb, var(--accent) 50%, transparent),
+    color-mix(in srgb, var(--accent) 16%, transparent));
+  clip-path: polygon(41% 0, 59% 0, 100% 100%, 0 100%);
+  filter: blur(1.5px);
+  animation: pd-feixe 3.4s ease-in-out infinite;
+}
+
+/* A luz batendo na etiqueta. É o que faz o feixe parecer CHEGAR nela,
+   em vez de só terminar no ar. */
+.palco-drone__poca {
+  position: absolute;
+  left: 50%;
+  bottom: 31%;
+  width: 34%;
+  height: 26px;
+  translate: -50% 50%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse,
+    color-mix(in srgb, var(--accent) 45%, transparent), transparent 70%);
+  filter: blur(4px);
   animation: pd-feixe 3.4s ease-in-out infinite;
 }
 
 @keyframes pd-feixe {
-  0%, 100% { opacity: 0.32; }
-  50%      { opacity: 0.68; }
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.85; }
 }
 
 /* ── A etiqueta lida ───────────────────────────────────────────── */
+/* É um rótulo IMPRESSO: papel claro com tinta escura, em qualquer
+   tema. Antes ela seguia o fundo da página, o que no tema claro dava
+   um cartão branco com QR quase branco — ilegível, e falso: etiqueta
+   de estoque não muda de cor porque o site mudou de tema. */
 .palco-drone__etiqueta {
   position: absolute;
   left: 50%;
-  bottom: 16%;
+  bottom: 12%;
   translate: -50% 0;
   display: grid;
   justify-items: center;
-  gap: 8px;
-  padding: 14px 14px 10px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--bg-0) 70%, transparent);
-  backdrop-filter: blur(3px);
+  gap: 6px;
+  padding: 13px 13px 9px;
+  border-radius: 10px;
+  background: #f2f5f8;
+  box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.6);
 }
 
-/* A mira contorna a etiqueta; nada é pintado em cima do código. */
+/* A mira contorna a etiqueta; nada é pintado em cima do código.
+   Fica para FORA do rótulo — assim ela é visível sobre o visor escuro,
+   em vez de se perder contra o papel claro. */
 .palco-drone__mira {
   position: absolute;
-  inset: 0;
+  inset: -7px;
   border-radius: var(--radius-sm);
+  --m: var(--accent-strong);
+  border-radius: 12px;
   background:
-    linear-gradient(var(--accent), var(--accent)) 0 0 / 14px 2px no-repeat,
-    linear-gradient(var(--accent), var(--accent)) 0 0 / 2px 14px no-repeat,
-    linear-gradient(var(--accent), var(--accent)) 100% 0 / 14px 2px no-repeat,
-    linear-gradient(var(--accent), var(--accent)) 100% 0 / 2px 14px no-repeat,
-    linear-gradient(var(--accent), var(--accent)) 0 100% / 14px 2px no-repeat,
-    linear-gradient(var(--accent), var(--accent)) 0 100% / 2px 14px no-repeat,
-    linear-gradient(var(--accent), var(--accent)) 100% 100% / 14px 2px no-repeat,
-    linear-gradient(var(--accent), var(--accent)) 100% 100% / 2px 14px no-repeat;
+    linear-gradient(var(--m), var(--m)) 0 0 / 15px 2.5px no-repeat,
+    linear-gradient(var(--m), var(--m)) 0 0 / 2.5px 15px no-repeat,
+    linear-gradient(var(--m), var(--m)) 100% 0 / 15px 2.5px no-repeat,
+    linear-gradient(var(--m), var(--m)) 100% 0 / 2.5px 15px no-repeat,
+    linear-gradient(var(--m), var(--m)) 0 100% / 15px 2.5px no-repeat,
+    linear-gradient(var(--m), var(--m)) 0 100% / 2.5px 15px no-repeat,
+    linear-gradient(var(--m), var(--m)) 100% 100% / 15px 2.5px no-repeat,
+    linear-gradient(var(--m), var(--m)) 100% 100% / 2.5px 15px no-repeat;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 55%, transparent));
   animation: pd-travar 3.4s ease-in-out infinite;
 }
 
@@ -265,17 +293,15 @@
   height: 62px;
 }
 
-.palco-drone__qr .qr-anc { fill: var(--accent); }
-.palco-drone__qr .qr-mio { fill: var(--bg-0); }
-.palco-drone__qr .qr-mod { fill: var(--accent-strong); }
-
-[data-theme="light"] .palco-drone__qr .qr-mio { fill: #f4f7fb; }
+.palco-drone__qr .qr-anc { fill: #0d1b2d; }
+.palco-drone__qr .qr-mio { fill: #f2f5f8; }
+.palco-drone__qr .qr-mod { fill: #0d1b2d; }
 
 .palco-drone__codigo {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 9.5px;
   letter-spacing: 0.14em;
-  color: var(--accent);
+  color: #46586d;
 }
 
 /* ── Telas estreitas ───────────────────────────────────────────── */
@@ -292,6 +318,7 @@
 @media (prefers-reduced-motion: reduce) {
   .palco-drone__voo,
   .palco-drone__feixe,
+  .palco-drone__poca,
   .palco-drone__mira,
   .palco-drone__anel,
   .palco-drone__marca i,

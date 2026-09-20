@@ -62,7 +62,7 @@ export default function Technology({ setPage }) {
         </motion.div>
 
         <motion.div
-          className="technology-core"
+          className="technology-core" data-paralaxe="30"
           aria-hidden="true"
           initial={{ opacity: 0, y: 14, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -81,7 +81,7 @@ export default function Technology({ setPage }) {
       </section>
 
       <section className="technology-section light">
-        <div className="technology-title">
+        <div className="technology-title reveal">
           <span className="tag">Stack do projeto</span>
           <h2>Tecnologias usadas no sistema</h2>
           <p>
@@ -90,7 +90,7 @@ export default function Technology({ setPage }) {
           </p>
         </div>
 
-        <div className="technology-stack-grid">
+        <div className="technology-stack-grid escalonar">
           <TechCard
             icon={RadioTower}
             title="RTSP direto do drone"
@@ -135,7 +135,7 @@ export default function Technology({ setPage }) {
       </section>
 
       <section className="technology-flow-section">
-        <div className="technology-flow-text">
+        <div className="technology-flow-text reveal-esq">
           <span className="tag">Fluxo técnico</span>
           <h2>Como a informação percorre o sistema</h2>
           <p>
@@ -144,7 +144,7 @@ export default function Technology({ setPage }) {
           </p>
         </div>
 
-        <div className="technology-flow">
+        <div className="technology-flow escalonar">
           <FlowStep number="01" icon={Drone} title="Drone" text="Transmite o vídeo por RTSP na rede dele." />
           <FlowLine />
           <FlowStep number="02" icon={Eye} title="Leitura" text="O Agent acha o QR e confirma em vários quadros." />
@@ -158,7 +158,7 @@ export default function Technology({ setPage }) {
       </section>
 
       <section className="technology-architecture">
-        <div className="architecture-left">
+        <div className="architecture-left reveal-esq">
           <span className="tag">Arquitetura</span>
           <h2>Cada parte com uma responsabilidade</h2>
           <p>
@@ -176,19 +176,19 @@ export default function Technology({ setPage }) {
           </div>
         </div>
 
-        <div className="architecture-right">
+        <div className="architecture-right reveal-dir">
           <ScannerEffect />
         </div>
       </section>
 
       <section className="technology-future light">
-        <div className="technology-title">
+        <div className="technology-title reveal">
           <span className="tag">Em planejamento</span>
           <h2>Direções para a evolução da plataforma</h2>
           <p>Possibilidades para próximas versões. Estes recursos ainda não fazem parte da experiência atual.</p>
         </div>
 
-        <div className="future-grid">
+        <div className="future-grid escalonar">
           <FutureCard icon={Database} title="Integração com ERP" text="Conectar o inventário aos sistemas de gestão da empresa." />
           <FutureCard icon={RadioTower} title="Painel ao vivo" text="Acompanhar o voo de outro computador, por WebSocket, sem esperar o fim da leitura." />
           <FutureCard icon={ShieldCheck} title="Auditoria de acesso" text="Ampliar o histórico de ações e a rastreabilidade das alterações." />

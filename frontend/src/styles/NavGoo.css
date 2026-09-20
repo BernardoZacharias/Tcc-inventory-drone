@@ -1,0 +1,130 @@
+/*
+ * NavGoo.css — a gota líquida sob o item ativo da navegação.
+ *
+ * A pílula da navegação vira o palco: o corpo dela e a gota ficam numa
+ * camada filtrada, e os botões passam por cima, sem filtro. Isso é o
+ * que permite o líquido existir sem borrar uma letra sequer.
+ */
+
+/* O <svg> do filtro não desenha nada; só precisa existir no documento. */
+.nav-goo__def {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* A pílula deixa de pintar o próprio fundo: quem pinta agora é a
+   camada filtrada, senão haveria duas barras sobrepostas. */
+.navbar-nav {
+  position: relative;
+  background: none;
+  border: 0;
+  /* A gota sai para fora da barra; sem isto ela seria cortada. */
+  overflow: visible;
+}
+
+.nav-goo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  filter: url(#gestock-goo);
+}
+
+.nav-goo__barra {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+}
+
+/* A gota nasce dentro da barra e desce. Dois terços dela ficam para
+   fora — é essa sobra que o filtro "cola" no corpo da barra. */
+.nav-goo__gota {
+  position: absolute;
+  left: 0;
+  top: 58%;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  opacity: 0;
+  translate: calc(var(--x, 0px) - 17px) 0;
+  transition:
+    translate 520ms cubic-bezier(0.66, -0.22, 0.28, 1.22),
+    opacity 240ms ease;
+}
+
+/* Alonga na vertical enquanto viaja e volta à forma ao chegar. É o
+   estica-e-recolhe que faz o olho ler "líquido" em vez de "bolinha". */
+.nav-goo__gota.derretendo {
+  animation: goo-derreter 420ms ease-in-out;
+}
+
+@keyframes goo-derreter {
+  0%   { scale: 1 1; }
+  45%  { scale: 0.62 1.5; }
+  100% { scale: 1 1; }
+}
+
+/* ── O ícone dentro da gota ────────────────────────────────────── */
+/* Fora da camada filtrada, por cima, e acompanhando o mesmo --x. */
+.nav-goo__icone {
+  position: absolute;
+  left: 0;
+  top: 58%;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-ink);
+  opacity: 0;
+  pointer-events: none;
+  translate: calc(var(--x, 0px) - 17px) 0;
+  transition:
+    translate 520ms cubic-bezier(0.66, -0.22, 0.28, 1.22),
+    opacity 240ms ease;
+}
+
+.nav-goo__icone svg {
+  width: 15px;
+  height: 15px;
+  /* Entra depois da gota: o ícone aparece quando ela já chegou. */
+  animation: goo-icone 520ms ease-out;
+}
+
+@keyframes goo-icone {
+  0%, 45% { opacity: 0; scale: 0.4; }
+  100%    { opacity: 1; scale: 1; }
+}
+
+/* ── Os botões, por cima de tudo ───────────────────────────────── */
+.navbar-nav .nav-link {
+  position: relative;
+  z-index: 1;
+}
+
+/* O item ativo perde a cápsula própria: a gota já marca onde ele está,
+   e duas marcas para a mesma coisa é ruído. */
+.navbar-nav .nav-link.active {
+  background: none;
+  box-shadow: none;
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-goo__gota,
+  .nav-goo__icone { transition: none; }
+  .nav-goo__gota.derretendo { animation: none; }
+  .nav-goo__icone svg { animation: none; }
+}
+
+/* Telas estreitas usam o menu em diálogo; a barra some e a gota
+   com ela. */
+@media (max-width: 900px) {
+  .nav-goo,
+  .nav-goo__icone { display: none; }
+}

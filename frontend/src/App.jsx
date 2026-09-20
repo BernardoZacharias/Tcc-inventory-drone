@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import useReveal from "./hooks/useReveal";
+import useScrollFX from "./hooks/useScrollFX";
+import "./styles/ScrollFX.css";
 import LoadingScreen from "./components/LoadingScreen";
 import CursorDrone from "./components/CursorDrone";
 import Home from "./pages/Home";
@@ -99,6 +101,8 @@ export default function App() {
 
   // Reobserva os elementos .reveal a cada troca de tela
   useReveal(`${page}:${booting}`);
+  // Barra de leitura e paralaxe; reancorados na mesma troca
+  useScrollFX(`${page}:${booting}`);
 
   // Cada navegação começa no hero antes da nova tela ser pintada.
   useLayoutEffect(() => {
@@ -148,6 +152,10 @@ export default function App() {
       </div>
       {booting && <LoadingScreen onComplete={finishIntro} />}
       {!booting && ["home", "about", "technology"].includes(page) && <CursorDrone />}
+
+      {/* Barra de leitura: quanto da página já passou. Fica fora do
+          .app-view para não entrar nas transições de troca de tela. */}
+      {!booting && <span className="barra-leitura" aria-hidden="true" />}
     </>
   );
 }

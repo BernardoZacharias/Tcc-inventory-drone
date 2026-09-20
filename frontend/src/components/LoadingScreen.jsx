@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import logo from "../assets/logo-gestock.png";
-import DroneModel from "./DroneModel";
+import drone from "../assets/drone.png";
 import "../styles/LoadingScreen.css";
 
 const MINIMUM_DURATION = 1200;
@@ -138,7 +138,11 @@ export default function LoadingScreen({ onComplete }) {
             <div className="gestock-loader__rotor-wash wash-left" />
             <div className="gestock-loader__rotor-wash wash-right" />
 
-            <DroneModel className="drone-model gestock-loader__drone" />
+            {/* O mesmo drone da página inicial e da tela de acesso.
+                A abertura era a última tela que ainda montava a
+                aeronave em vetor — três desenhos diferentes do mesmo
+                produto é o tipo de detalhe que denuncia a costura. */}
+            <img className="gestock-loader__drone" src={drone} alt="" />
           </div>
 
           <div className="gestock-loader__charge-beam" />

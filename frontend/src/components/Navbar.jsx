@@ -1,15 +1,18 @@
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { House, Info, Cpu, Mail } from "lucide-react";
 import BotaoInstalador from "./BotaoInstalador";
+import NavGoo, { FiltroGoo } from "./NavGoo";
+import "../styles/NavGoo.css";
 import ThemeToggle from "./ThemeToggle";
 import NavigationDialog from "./NavigationDialog";
 import logo from "../assets/logo-gestock.png";
 
 const ITENS = [
-  { key: "home",       label: "Início" },
-  { key: "about",      label: "Sobre o sistema" },
-  { key: "technology", label: "Tecnologia" },
-  { key: "contact",    label: "Contato" }
+  { key: "home",       label: "Início",          Icone: House },
+  { key: "about",      label: "Sobre o sistema", Icone: Info },
+  { key: "technology", label: "Tecnologia",      Icone: Cpu },
+  { key: "contact",    label: "Contato",         Icone: Mail }
 ];
 
 /*
@@ -22,6 +25,9 @@ const ITENS = [
 export default function Navbar({ setPage, current = "home" }) {
   const [aberto, setAberto] = useState(false);
   const triggerRef = useRef(null);
+  const navRef = useRef(null);
+
+  const AtivoIcone = (ITENS.find((i) => i.key === current) || ITENS[0]).Icone;
 
   function ir(destino) {
     setAberto(false);
@@ -30,6 +36,8 @@ export default function Navbar({ setPage, current = "home" }) {
 
   return (
     <>
+      <FiltroGoo />
+
       <motion.header
         className="navbar"
         initial={{ y: -12, opacity: 0.72 }}
@@ -40,13 +48,16 @@ export default function Navbar({ setPage, current = "home" }) {
           <img src={logo} alt="Gestock" />
         </button>
 
-        <nav className="navbar-nav" aria-label="Navegação principal">
+        <nav ref={navRef} className="navbar-nav" aria-label="Navegação principal">
+          <NavGoo ativo={current} icone={<AtivoIcone />} />
+
           {ITENS.map((it) => (
             <button
               key={it.key}
               className={`nav-link${current === it.key ? " active" : ""}`}
               onClick={() => ir(it.key)}
               aria-current={current === it.key ? "page" : undefined}
+              data-nav={it.key}
             >
               {it.label}
             </button>
