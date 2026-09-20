@@ -1,9 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { resumoStats, listarEmpresas, pararLeitura, statusLeitura } from "../src/services/api.js";
+import { resumoStats, listarEmpresas, pararLeitura, statusLeitura,
+         rearmarAvisoDeSessao, EVENTO_SESSAO_EXPIRADA } from "../src/services/api.js";
 
-const storage = { getItem: (key) => key === "usuario" ? '{"perfil":"admin"}' : null };
+const storage = {
+  itens: { usuario: '{"perfil":"admin"}', token: "jwt-de-ontem" },
+  getItem(key) { return this.itens[key] ?? null; },
+  setItem(key, valor) { this.itens[key] = valor; },
+  removeItem(key) { delete this.itens[key]; },
+};
 function setup(t, response) {
+  storage.itens = { usuario: '{"perfil":"admin"}', token: "jwt-de-ontem" };
+  rearmarAvisoDeSessao();
   const originalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   Object.defineProperty(globalThis, "localStorage", { value: storage, configurable: true });
   t.after(() => { if (originalStorage) Object.defineProperty(globalThis, "localStorage", originalStorage); else delete globalThis.localStorage; });
@@ -36,6 +44,33 @@ test("HTTP 401 recebe instrução de sessão expirada", async (t) => {
   const result = await listarEmpresas();
   assert.equal(result.success, false);
   assert.match(result.message, /sessão expirou/);
+});
+test("HTTP 401 encerra a sessão em vez de deixar o usuário preso", async (t) => {
+  setup(t, async () => new Response('{"message":"Unauthorized"}', { status: 401 }));
+  await listarEmpresas();
+  assert.equal(storage.getItem("token"), null, "o token expirado continuou guardado");
+  assert.equal(storage.getItem("usuario"), null, "o usuário continuou na sessão");
+});
+test("HTTP 401 avisa o app uma única vez, mesmo com várias chamadas", async (t) => {
+  setup(t, async () => new Response('{"message":"Unauthorized"}', { status: 401 }));
+
+  // O Node não tem addEventListener no globalThis; observar o despacho
+  // testa exatamente o contrato que o App consome no navegador.
+  const avisos = [];
+  const original = Object.getOwnPropertyDescriptor(globalThis, "dispatchEvent");
+  Object.defineProperty(globalThis, "dispatchEvent", {
+    value: (evento) => { avisos.push(evento.type); return true; },
+    configurable: true,
+  });
+  t.after(() => {
+    if (original) Object.defineProperty(globalThis, "dispatchEvent", original);
+    else delete globalThis.dispatchEvent;
+  });
+
+  // Uma tela dispara várias chamadas juntas: todas voltam 401.
+  await Promise.all([listarEmpresas(), listarEmpresas(), listarEmpresas()]);
+  assert.deepEqual(avisos, [EVENTO_SESSAO_EXPIRADA],
+    "o usuário levaria um aviso por requisição");
 });
 test("zero é válido quando todas as fontes confirmam lista vazia", async (t) => {
   setup(t, async () => new Response('{"success":true,"data":[]}', { status: 200 }));

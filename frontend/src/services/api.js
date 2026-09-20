@@ -9,11 +9,47 @@
  */
 
 import { computeReadingStats } from "../utils/readingStats.js";
-import { isAdmin, currentEmpresaId } from "../utils/auth.js";
+import { isAdmin, currentEmpresaId, logout } from "../utils/auth.js";
 import { getApiUrl } from "./apiEndpoint.js";
 export { API_URL, getApiUrl } from "./apiEndpoint.js";
 
 const TIMEOUT_MS = 5000;
+
+/*
+ * O token vale 8 horas. Passado esse prazo, toda chamada volta 401 e a
+ * tela vira um amontoado de erros — com o usuário preso nela, sem nada
+ * indicando que o caminho é sair e entrar de novo.
+ *
+ * Aqui o 401 encerra a sessão e avisa o App, que leva à tela de acesso.
+ * O aviso é um evento, e não uma importação do roteador, para o cliente
+ * da API continuar sem saber que existe React do outro lado.
+ *
+ * O login NÃO passa por aqui (usa fetch direto), então digitar a senha
+ * errada não dispara nada disto.
+ */
+export const EVENTO_SESSAO_EXPIRADA = "gestock:sessao-expirada";
+
+let _avisouExpiracao = false;
+
+function sessaoExpirou() {
+  // Uma tela dispara várias chamadas de uma vez; todas voltariam 401.
+  // Sem esta trava, seriam vários avisos para o mesmo problema.
+  if (_avisouExpiracao) return;
+  _avisouExpiracao = true;
+
+  // Avisar NUNCA pode derrubar a requisição. O armazenamento pode estar
+  // bloqueado (janela anônima), e fora do navegador não há evento para
+  // despachar — em nenhum dos casos a resposta da API deve se perder.
+  try { logout(); } catch { /* armazenamento indisponível */ }
+  try {
+    globalThis.dispatchEvent?.(new CustomEvent(EVENTO_SESSAO_EXPIRADA));
+  } catch { /* sem DOM: o aviso é opcional, a resposta não */ }
+}
+
+/** Chamado ao entrar de novo: a próxima expiração volta a avisar. */
+export function rearmarAvisoDeSessao() {
+  _avisouExpiracao = false;
+}
 
 let _backendOnline = null;
 
@@ -47,8 +83,9 @@ async function request(path, { method = "GET", body, timeout } = {}) {
     _backendOnline = r.status < 500;
     const data = await r.json();
     if (!r.ok) {
+      if (r.status === 401) sessaoExpirou();
       const message = r.status === 401
-        ? "Sua sessão expirou. Saia e entre novamente para continuar."
+        ? "Sua sessão expirou. Entre novamente para continuar."
         : data.message || data.mensagem || "Não foi possível concluir a solicitação. Tente novamente.";
       return { ...data, success: false, sucesso: false, message, mensagem: message };
     }

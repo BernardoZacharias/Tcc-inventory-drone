@@ -19,6 +19,8 @@ import Readings from "./pages/Readings";
 import Operators from "./pages/Operators";
 import { getCurrentUser } from "./utils/auth";
 import { PAGE_TITLES, resolveRoute, defaultRoute, isDesktop } from "./utils/navigation";
+import { EVENTO_SESSAO_EXPIRADA } from "./services/api";
+import { toast } from "./services/toast";
 
 function hasSession() {
   try { return Boolean(getCurrentUser() && localStorage.getItem("token")); }
@@ -77,6 +79,23 @@ export default function App() {
       window.removeEventListener("hashchange", restore);
     };
   }, []);
+
+  /*
+   * Sessão expirada (o token dura 8 horas).
+   *
+   * Antes, a tela só exibia o erro e o usuário ficava parado nela sem
+   * saber que precisava sair e entrar de novo. Agora o caminho é feito
+   * por ele: a sessão já foi encerrada pelo cliente da API, e aqui ele
+   * é levado à tela de acesso com a explicação.
+   */
+  useEffect(() => {
+    const aoExpirar = () => {
+      toast.info("Sua sessão expirou. Entre novamente para continuar.");
+      navigate("login", null);
+    };
+    window.addEventListener(EVENTO_SESSAO_EXPIRADA, aoExpirar);
+    return () => window.removeEventListener(EVENTO_SESSAO_EXPIRADA, aoExpirar);
+  }, [navigate]);
 
   // Reobserva os elementos .reveal a cada troca de tela
   useReveal(`${page}:${booting}`);

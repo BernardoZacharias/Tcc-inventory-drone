@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "../services/toast";
-import { getApiUrl } from "../services/api";
+import { getApiUrl, rearmarAvisoDeSessao } from "../services/api";
 import { setCurrentUser, isAdminEmail } from "../utils/auth";
 import { isDesktop } from "../utils/navigation";
 import usePreflight from "../hooks/usePreflight";
@@ -146,6 +146,8 @@ export default function Login({ setPage }) {
       };
 
       localStorage.setItem("token", data.data.token);
+      // Sessão nova: a próxima expiração precisa voltar a avisar.
+      rearmarAvisoDeSessao();
       setCurrentUser(usuario);
       toast.success(`Bem-vindo, ${usuario.nome || "usuário"}`);
       setPage("dashboard");
