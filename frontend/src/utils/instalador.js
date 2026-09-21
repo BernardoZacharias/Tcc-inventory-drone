@@ -7,17 +7,20 @@
  * Por isso a chamada principal do site é baixar, e não entrar.
  *
  * O endereço mora aqui, e só aqui, para trocar de lugar sem caçar
- * botão por página. Em produção, aponte `VITE_INSTALADOR_URL` para o
- * arquivo publicado; sem isso, o botão leva à página de versões do
- * repositório, que é onde o instalador é publicado.
+ * botão por página. O instalador oficial acompanha o próprio frontend,
+ * então o download também funciona na publicação da Vercel sem depender
+ * de uma release externa. `VITE_INSTALADOR_URL` continua disponível para
+ * substituir o destino no futuro, se necessário.
  */
 
-const PADRAO = "https://github.com/BernardoZacharias/Tcc-inventory-drone/releases/latest";
+const ARQUIVO = "Gestock-Drone-Setup-1.0.0.exe";
+const PADRAO = `/downloads/${ARQUIVO}`;
 
 export const INSTALADOR = {
   url: import.meta.env?.VITE_INSTALADOR_URL || PADRAO,
+  arquivo: ARQUIVO,
   versao: import.meta.env?.VITE_INSTALADOR_VERSAO || "1.0.0",
-  tamanho: import.meta.env?.VITE_INSTALADOR_TAMANHO || "84 MB",
+  tamanho: import.meta.env?.VITE_INSTALADOR_TAMANHO || "76 MB",
   sistema: "Windows 10 ou 11 · 64 bits",
 };
 

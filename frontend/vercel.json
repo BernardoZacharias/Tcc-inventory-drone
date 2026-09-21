@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "headers": [
+    {
+      "source": "/downloads/Gestock-Drone-Setup-1.0.0.exe",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/vnd.microsoft.portable-executable"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"Gestock-Drone-Setup-1.0.0.exe\""
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, s-maxage=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}

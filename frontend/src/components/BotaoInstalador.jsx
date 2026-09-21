@@ -19,8 +19,8 @@ export default function BotaoInstalador({ variante = "primary", detalhe = true }
       <a
         className={`button ${variante} baixar__botao`}
         href={INSTALADOR.url}
-        target="_blank"
-        rel="noreferrer"
+        download={INSTALADOR.arquivo}
+        aria-label={`Baixar Gestock Drone ${INSTALADOR.versao} para Windows`}
       >
         <span className="button-label">Baixar instalador</span>
         <span className="button-ico" aria-hidden="true">

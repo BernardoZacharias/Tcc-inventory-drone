@@ -74,10 +74,6 @@
   min-height: 100vh;
   padding: 130px 60px 90px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 80% 20%, var(--accent-line), transparent 38%),
-    radial-gradient(circle at 15% 82%, var(--green-soft), transparent 32%),
-    linear-gradient(135deg, var(--bg-0), var(--bg-1) 55%, var(--bg-0));
 }
 
 .hero-grid {
@@ -86,10 +82,6 @@
   background-image:
     linear-gradient(var(--accent-soft) 1px, transparent 1px),
     linear-gradient(90deg, var(--accent-soft) 1px, transparent 1px);
-  background-size: 60px 60px;
-  opacity: 0.35;
-  -webkit-mask-image: linear-gradient(180deg, transparent, var(--bg-0) 30%, var(--bg-0) 70%, transparent);
-  mask-image: linear-gradient(180deg, transparent, var(--bg-0) 30%, var(--bg-0) 70%, transparent);
 }
 
 .hero-content {

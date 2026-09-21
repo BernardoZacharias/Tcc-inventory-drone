@@ -186,21 +186,30 @@
   color: var(--accent);
 }
 
-/* A chamada final segue o mesmo alinhamento editorial das seções. */
+/* A chamada final é o fecho da página, não mais uma seção editorial:
+   ela centraliza. As seções acima alinham à esquerda porque são
+   leitura corrida; aqui o objetivo é uma única ação, e o olho deve
+   cair direto nela.
+
+   O contêiner vira coluna flex em vez de confiar só em `text-align`:
+   o botão do instalador é um elemento de bloco, e alinhamento de
+   texto não o moveria. */
 .app-view .home .final-cta {
-  text-align: left;
+  text-align: center;
 }
 
 .app-view .home .final-cta-inner {
-  width: min(1200px, 100%);
-  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(760px, 100%);
+  max-width: 760px;
   margin-inline: auto;
 }
 
 .app-view .home .final-cta-inner p {
-  max-width: 680px;
-  margin-left: 0;
-  margin-right: 0;
+  max-width: 620px;
+  margin-inline: auto;
 }
 
 .app-view :is(.about-page, .technology-page) .public-next-step,
@@ -275,16 +284,6 @@
   margin-top: 36px;
 }
 
-.app-view :is(.about-page .about-back, .technology-page .technology-back, .contact-page .contact-back) {
-  top: 92px;
-  left: 70px;
-  padding: 8px 14px;
-  color: var(--accent);
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-full);
-}
-
 /* A malha da Home passa a ter a mesma densidade da malha de Sobre. */
 .app-view .home .hero-grid {
   background-size: 42px 42px;
@@ -314,7 +313,7 @@
 
 /* O conteúdo começa na margem de 70px, como em Sobre, em vez de ser
    comprimido por um segundo contêiner central. */
-.app-view .home :is(.benefits-grid, .tech-section, .final-cta-inner),
+.app-view .home :is(.benefits-grid, .tech-section),
 .app-view .contact-page .contact-layout {
   width: 100%;
   max-width: none;
@@ -325,10 +324,6 @@
 .app-view .home .tech-section {
   grid-template-columns: 1fr 1fr;
   gap: 70px;
-}
-
-.app-view .home .final-cta-inner {
-  width: 100%;
 }
 
 .app-view .contact-page .contact-layout {
@@ -439,9 +434,6 @@
     padding: 80px 28px;
   }
 
-  .app-view :is(.about-page .about-back, .technology-page .technology-back, .contact-page .contact-back) {
-    left: 28px;
-  }
 }
 
 @media (max-width: 700px) {

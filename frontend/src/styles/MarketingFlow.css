@@ -17,22 +17,36 @@
 }
 
 /* Um único clima para as quatro aberturas. */
+/* O clima forte — o que Tecnologia e Contato ja mostravam.
+
+   A regra unificada existia, mas era a versao fraca: ciano a 9% e
+   verde a 5%. Cada pagina redeclarava o proprio fundo no seu arquivo,
+   e como esses arquivos chegam DEPOIS deste (telas sob demanda), a
+   versao forte de Tecnologia (ciano a 32%) vencia a unificada. So a
+   Inicial ficava com o fundo apagado, porque o Home.css chega ANTES
+   e perdia para a regra fraca daqui.
+
+   Agora o valor forte mora aqui e as copias sairam das paginas. Uma
+   fonte so: as quatro aberturas nao tem como divergir de novo. */
 .hero,
 .about-hero,
 .technology-hero,
 .contact-hero {
   color: var(--text);
   background:
-    radial-gradient(54rem 38rem at 82% 18%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 68%),
-    radial-gradient(46rem 34rem at 13% 84%, color-mix(in srgb, var(--green) 5%, transparent), transparent 72%),
-    linear-gradient(180deg, var(--bg-0) 0%, color-mix(in srgb, var(--bg-1) 66%, var(--bg-0)) 100%);
+    radial-gradient(circle at 78% 22%, var(--accent-line), transparent 35%),
+    radial-gradient(circle at 17% 82%, var(--green-soft), transparent 30%),
+    linear-gradient(135deg, var(--bg-0), var(--bg-1) 55%, var(--bg-0));
 }
 
+/* A malha segue o mesmo caminho: a densidade e a forca moram aqui.
+   A mascara evita que as linhas encostem na navbar e no fim da secao. */
 .hero-grid,
 .about-hero::before,
 .technology-hero::before,
 .contact-hero::before {
-  opacity: 0.22;
+  background-size: 42px 42px;
+  opacity: 0.6;
   -webkit-mask-image: linear-gradient(180deg, transparent 2%, #000 28%, #000 72%, transparent 100%);
   mask-image: linear-gradient(180deg, transparent 2%, #000 28%, #000 72%, transparent 100%);
 }

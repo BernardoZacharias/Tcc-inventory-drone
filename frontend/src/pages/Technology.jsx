@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import {
-  ArrowLeft,
   BrainCircuit,
   Cpu,
   Database,
@@ -27,11 +26,6 @@ export default function Technology({ setPage }) {
   return (
     <main className="technology-page">
       <section className="technology-hero">
-        <button className="technology-back" onClick={() => setPage("home")}>
-          <ArrowLeft size={18} />
-          Voltar
-        </button>
-
         <motion.div
           className="technology-hero-content"
           initial={{ opacity: 0, y: 18 }}

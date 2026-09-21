@@ -13,47 +13,18 @@
     grid-template-columns: 1.1fr 0.9fr;
     gap: 60px;
     align-items: center;
-    background:
-      radial-gradient(circle at 80% 20%, var(--accent-line), transparent 35%),
-      radial-gradient(circle at 15% 80%, var(--green-soft), transparent 30%),
-      linear-gradient(135deg, var(--bg-0), var(--bg-1) 55%, var(--bg-0));
   }
 
-  .about-back {
-    background: var(--surface-2) !important;
-    border: 1px solid var(--line) !important;
-    padding: 8px 14px !important;
-    border-radius: 999px !important;
-    top: 92px !important;
-  }
-
-  .about-hero::before {
+.about-hero::before {
     content: "";
     position: absolute;
     inset: 0;
-    background:
+    background-image:
       linear-gradient(var(--accent-soft) 1px, transparent 1px),
       linear-gradient(90deg, var(--accent-soft) 1px, transparent 1px);
-    background-size: 42px 42px;
-    opacity: 0.6;
   }
 
-  .about-back {
-    position: absolute;
-    top: 30px;
-    left: 70px;
-    z-index: 3;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--surface-2);
-    color: var(--accent);
-    border: 1px solid var(--accent-line);
-    padding: 12px 18px;
-    border-radius: 999px;
-  }
-
-  .about-hero-content {
+.about-hero-content {
     position: relative;
     z-index: 2;
   }
@@ -280,11 +251,7 @@
       padding: 110px 28px 60px;
     }
 
-    .about-back {
-      left: 28px;
-    }
-
-    .about-section,
+.about-section,
     .about-benefits {
       padding: 80px 28px;
     }

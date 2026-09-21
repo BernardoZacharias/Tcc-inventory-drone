@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, Building2, Mail, MapPin, MessageCircle,
+  Building2, Mail, MapPin, MessageCircle,
   Phone, Send, User, Warehouse, CheckCircle2, AlertCircle
 } from "lucide-react";
 
@@ -54,10 +54,6 @@ export default function Contact({ setPage }) {
     <main className="contact-page">
 
       <section className="contact-hero">
-        <button className="contact-back" onClick={() => setPage("home")}>
-          <ArrowLeft size={16} /> Voltar
-        </button>
-
         <motion.div
           className="contact-hero-content"
           initial={{ opacity: 0, y: 18 }}

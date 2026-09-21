@@ -13,10 +13,6 @@
   grid-template-columns: 1.1fr 0.9fr;
   gap: 60px;
   align-items: center;
-  background:
-    radial-gradient(circle at 80% 20%, var(--accent-line), transparent 38%),
-    radial-gradient(circle at 15% 82%, var(--green-soft), transparent 32%),
-    linear-gradient(135deg, var(--bg-0), var(--bg-1) 55%, var(--bg-0));
 }
 
 .contact-hero::before {
@@ -26,32 +22,6 @@
   background-image:
     linear-gradient(var(--accent-soft) 1px, transparent 1px),
     linear-gradient(90deg, var(--accent-soft) 1px, transparent 1px);
-  background-size: 60px 60px;
-  opacity: 0.5;
-  mask-image: linear-gradient(180deg, transparent, var(--bg-0) 30%, var(--bg-0) 70%, transparent);
-}
-
-.contact-back {
-  position: absolute;
-  top: 92px;
-  left: 60px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--surface-2);
-  color: var(--muted);
-  border: 1px solid var(--line);
-  padding: 8px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-.contact-back:hover {
-  color: var(--cyan);
-  border-color: var(--accent-line);
-  transform: translateX(-2px);
 }
 
 .contact-hero-content,
@@ -251,5 +221,4 @@
 
   .contact-hero { padding: 130px 24px 60px; }
   .contact-section { padding: 70px 24px; }
-  .contact-back { left: 24px; }
 }
