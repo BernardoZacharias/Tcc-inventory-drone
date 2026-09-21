@@ -1,8 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  direcaoEntre, transicaoDeTela, DESLIZE,
-  variantesPara, transicaoDePainel, SUBIDA_PAINEL,
+  direcaoEntre, transicaoDeTela, DESLIZE, deveAnimarTroca,
 } from "../src/utils/transicao.js";
 
 /*
@@ -75,51 +74,30 @@ test("a tela sai mais rápido do que a próxima entra", () => {
 });
 
 /*
- * O painel não é a landing.
+ * O painel não anima.
  *
- * Aqui o risco é o inverso do deslize: nada quebra se o painel herdar
- * a animação longa da landing — ele só fica lento, e lentidão é o tipo
- * de defeito que a gente se acostuma a ignorar. Os testes prendem a
- * separação.
+ * Aqui o risco é o inverso do deslize: nada quebra se o painel voltar
+ * a entrar na camada animada — ele só fica lento de novo, e lentidão é
+ * o tipo de defeito que a gente se acostuma a ignorar. O teste prende
+ * a separação.
  */
 
-test("as telas da landing continuam com o deslize", () => {
+test("as telas da landing animam a troca", () => {
   for (const tela of ["home", "about", "technology", "contact"]) {
-    assert.equal(variantesPara(tela), transicaoDeTela);
+    assert.equal(deveAnimarTroca(tela), true, tela);
   }
 });
 
-test("as telas de trabalho usam a transição do painel", () => {
+test("as telas de trabalho não animam a troca", () => {
   for (const tela of ["dashboard", "readings", "reports", "operations",
                       "companies", "alerts", "drones", "operators",
                       "reading", "company", "login"]) {
-    assert.equal(variantesPara(tela), transicaoDePainel);
+    assert.equal(deveAnimarTroca(tela), false, tela);
   }
 });
 
-test("o painel não desliza para os lados", () => {
-  // Deslocamento horizontal no painel sugeriria uma vizinhança entre
-  // telas que não existe: relatórios não fica "à direita" de alertas.
-  assert.equal(transicaoDePainel.entrar.x, undefined);
-  assert.equal(transicaoDePainel.sair.x, undefined);
-  assert.equal(transicaoDePainel.entrar.y, SUBIDA_PAINEL);
-  assert.equal(transicaoDePainel.centro.y, 0);
-});
-
-test("a troca no painel é bem mais curta que a da landing", () => {
-  const painel = transicaoDePainel.centro.transition.duration
-               + transicaoDePainel.sair.transition.duration;
-  const landing = transicaoDeTela.centro.transition.duration
-                + transicaoDeTela.sair(1).transition.duration;
-
-  // Com mode="wait" os dois tempos se somam a cada clique.
-  assert.ok(painel < landing / 2,
-    `painel (${painel}s) deveria ser bem menor que landing (${landing}s)`);
-  assert.ok(painel <= 0.3, `painel demorando ${painel}s`);
-});
-
-test("a saída do painel é mais rápida que a entrada", () => {
-  // O que interessa é a tela que chega, não a que vai embora.
-  assert.ok(transicaoDePainel.sair.transition.duration
-          < transicaoDePainel.centro.transition.duration);
+test("tela desconhecida não anima", () => {
+  // O padrão seguro é não animar: uma tela nova entra no painel com
+  // muito mais frequência do que na landing.
+  assert.equal(deveAnimarTroca("qualquer-coisa"), false);
 });

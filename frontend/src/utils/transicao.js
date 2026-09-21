@@ -51,50 +51,36 @@ export const transicaoDeTela = {
 };
 
 /* ──────────────────────────────────────────────────────────────────
- * O PAINEL NÃO É A LANDING
+ * O PAINEL NÃO ANIMA
  *
  * Na landing a troca de tela é parte da apresentação: o deslize conta
- * de onde a pessoa veio e o tempo generoso faz parte do efeito.
+ * de onde a pessoa veio, e o tempo faz parte do efeito.
  *
  * No painel o objetivo é oposto. Quem está trabalhando troca de tela
- * dezenas de vezes seguidas, e cada animação vira espera repetida. Com
- * `mode="wait"`, o custo era somado: 0,26s para a atual sair MAIS
- * 0,42s para a nova entrar — quase 0,7s de tela vazia por clique.
+ * dezenas de vezes seguidas, e qualquer animação vira espera repetida.
+ * Uma primeira tentativa foi encurtar a transição em vez de tirá-la; o
+ * resultado continuou lento, porque o tempo não vinha da animação.
  *
- * A troca aqui é curta e quase só uma dissolução, com uma subida de
- * poucos pixels que sinaliza "conteúdo novo" sem pedir atenção. Sair é
- * mais rápido que entrar, porque ninguém quer ver a tela antiga indo
- * embora — o que interessa é a que chega.
+ * Vinha do `mode="wait"` somado ao carregamento sob demanda: a tela
+ * atual saía, o AnimatePresence segurava a entrada, e nesse intervalo
+ * o chunk da tela nova ainda estava sendo buscado — com `fallback`
+ * nulo, isso é tela em branco. A animação só dava nome ao que era
+ * espera de rede.
+ *
+ * Então o painel deixou de animar, e o carregamento passou a ser
+ * adiantado (ver `aquecerPainel` no App). Trocar de tela ali agora é
+ * troca de conteúdo, não uma cena.
  * ────────────────────────────────────────────────────────────────── */
 
-/** Subida discreta do painel: sinaliza troca sem virar movimento. */
-export const SUBIDA_PAINEL = 6;
-
-export const transicaoDePainel = {
-  entrar: { opacity: 0, y: SUBIDA_PAINEL },
-  centro: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
-  },
-  sair: {
-    opacity: 0,
-    // Sem deslocamento na saída: mover as duas telas em sequência
-    // faria o conteúdo "pular" na troca, que é justamente o que o
-    // painel não pode ter.
-    transition: { duration: 0.09, ease: "linear" },
-  },
-};
-
-/** Telas institucionais: as únicas que deslizam. */
-const PAGINAS_DA_LANDING = new Set(ORDEM_DAS_ABAS);
+/** Só as telas institucionais animam a troca. */
+const ANIMAM_TROCA = new Set(ORDEM_DAS_ABAS);
 
 /**
- * Qual conjunto de variantes a tela usa.
+ * A tela de destino participa de uma transição animada?
  *
- * A decisão é por tela de DESTINO: é ela que entra, e é a entrada que
- * a pessoa percebe.
+ * A decisão é pelo DESTINO: é ele que entra, e é a entrada que a
+ * pessoa percebe.
  */
-export function variantesPara(pagina) {
-  return PAGINAS_DA_LANDING.has(pagina) ? transicaoDeTela : transicaoDePainel;
+export function deveAnimarTroca(pagina) {
+  return ANIMAM_TROCA.has(pagina);
 }

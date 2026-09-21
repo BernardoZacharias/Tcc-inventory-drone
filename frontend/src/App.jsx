@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { direcaoEntre, variantesPara } from "./utils/transicao";
+import { direcaoEntre, deveAnimarTroca, transicaoDeTela } from "./utils/transicao";
 
 /* As telas institucionais, que compartilham a mesma barra de navegação. */
 const MOSTRAM_NAVEGACAO = new Set(["home", "about", "technology", "contact"]);
@@ -27,18 +27,59 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 
-const CompanyPanel = lazy(() => import("./pages/CompanyPanel"));
-const ReadingPanel = lazy(() => import("./pages/ReadingPanel"));
-const About = lazy(() => import("./pages/About"));
-const Technology = lazy(() => import("./pages/Technology"));
-const Contact = lazy(() => import("./pages/Contact"));
-const Companies = lazy(() => import("./pages/Companies"));
-const Operations = lazy(() => import("./pages/Operations"));
-const Reports = lazy(() => import("./pages/Reports"));
-const Alerts = lazy(() => import("./pages/Alerts"));
-const Drones = lazy(() => import("./pages/Drones"));
-const Readings = lazy(() => import("./pages/Readings"));
-const Operators = lazy(() => import("./pages/Operators"));
+const CARREGAR = {
+  company: () => import("./pages/CompanyPanel"),
+  reading: () => import("./pages/ReadingPanel"),
+  about: () => import("./pages/About"),
+  technology: () => import("./pages/Technology"),
+  contact: () => import("./pages/Contact"),
+  companies: () => import("./pages/Companies"),
+  operations: () => import("./pages/Operations"),
+  reports: () => import("./pages/Reports"),
+  alerts: () => import("./pages/Alerts"),
+  drones: () => import("./pages/Drones"),
+  readings: () => import("./pages/Readings"),
+  operators: () => import("./pages/Operators"),
+};
+
+const CompanyPanel = lazy(CARREGAR.company);
+const ReadingPanel = lazy(CARREGAR.reading);
+const About = lazy(CARREGAR.about);
+const Technology = lazy(CARREGAR.technology);
+const Contact = lazy(CARREGAR.contact);
+const Companies = lazy(CARREGAR.companies);
+const Operations = lazy(CARREGAR.operations);
+const Reports = lazy(CARREGAR.reports);
+const Alerts = lazy(CARREGAR.alerts);
+const Drones = lazy(CARREGAR.drones);
+const Readings = lazy(CARREGAR.readings);
+const Operators = lazy(CARREGAR.operators);
+
+/* As telas de trabalho do painel. */
+const TELAS_DO_PAINEL = ["companies", "operations", "reports", "alerts",
+                         "drones", "readings", "operators", "company", "reading"];
+
+/*
+ * Busca os pacotes do painel ANTES de alguém clicar.
+ *
+ * Dividir o pacote deixou a primeira carga leve, mas empurrou o custo
+ * para a navegação: com `fallback` nulo, o intervalo entre pedir a tela
+ * e o arquivo chegar é tela em branco. Era esse branco — e não a
+ * animação — o "delay grande" ao trocar de tela no painel.
+ *
+ * Aquecer resolve sem desfazer a divisão: os arquivos chegam enquanto o
+ * navegador está ocioso, e o clique encontra tudo em memória. Chamar
+ * `import()` de novo depois não custa nada — o módulo já está
+ * resolvido, e o próprio bundler devolve a mesma promessa.
+ */
+let aquecido = false;
+function aquecerPainel() {
+  if (aquecido) return;
+  aquecido = true;
+  // Falha aqui não é erro de aplicação: se a rede cair, o carregamento
+  // sob demanda tenta de novo na hora do clique, como sempre fez.
+  for (const tela of TELAS_DO_PAINEL) CARREGAR[tela]?.().catch(() => {});
+}
 
 import { getCurrentUser } from "./utils/auth";
 import { PAGE_TITLES, resolveRoute, defaultRoute, isDesktop } from "./utils/navigation";
@@ -92,6 +133,9 @@ export default function App() {
   const [direcao, setDirecao] = useState(0);
   const semMovimento = useReducedMotion();
 
+  /* Só a landing anima a troca; o painel troca de conteúdo direto. */
+  const animaTroca = deveAnimarTroca(page);
+
   const navigate = useCallback((destination, company) => {
     const next = resolveRoute(destination, company, hasSession());
     if (next.page === route.page && next.company?.id === route.company?.id) return;
@@ -136,6 +180,26 @@ export default function App() {
   useReveal(`${page}:${booting}`);
   // Barra de leitura e paralaxe; reancorados na mesma troca
   useScrollFX(`${page}:${booting}`);
+
+  /*
+   * Assim que a pessoa chega ao painel, os pacotes das outras telas
+   * dele são buscados em segundo plano.
+   *
+   * `requestIdleCallback` para não disputar banda com o que a tela
+   * atual ainda precisa: o aquecimento é uma aposta sobre o próximo
+   * clique, e aposta não passa na frente do que já foi pedido. Onde
+   * ele não existe (Safari antigo), um timeout serve.
+   */
+  useEffect(() => {
+    if (MOSTRAM_NAVEGACAO.has(page)) return;
+    const ocioso = window.requestIdleCallback
+      ? window.requestIdleCallback(aquecerPainel, { timeout: 2000 })
+      : window.setTimeout(aquecerPainel, 600);
+    return () => {
+      if (window.cancelIdleCallback) window.cancelIdleCallback(ocioso);
+      else window.clearTimeout(ocioso);
+    };
+  }, [page]);
 
   // Cada navegação começa no hero antes da nova tela ser pintada.
   useLayoutEffect(() => {
@@ -182,49 +246,75 @@ export default function App() {
         {MOSTRAM_NAVEGACAO.has(page) && <Navbar setPage={setPage} current={page} />}
 
         {/*
-          A troca de tela desliza na direção do clique — na landing.
+          A landing desliza na direção do clique; o painel, não.
 
-          O painel usa outro conjunto de variantes: quem trabalha troca
-          de tela o tempo todo, e ali a animação vira espera repetida.
-          `variantesPara` decide pela tela de destino.
+          `mode="wait"` faz a tela que sai terminar antes de a próxima
+          entrar — bom para a apresentação, caro para quem trabalha: o
+          tempo das duas se soma a cada clique, e no meio dele ainda
+          cabia o carregamento do pacote da tela nova.
 
-          `mode="wait"` garante que a que sai termine antes de a próxima
-          entrar: com as duas ao mesmo tempo, seria preciso tirá-las do
-          fluxo com posicionamento absoluto, e aí a altura da página
-          saltaria no meio da transição.
+          Por isso o painel fica FORA do AnimatePresence, em vez de
+          dentro dele com duração curta: assim não há quadro de espera
+          nenhum, e a troca é imediata.
         */}
-        <AnimatePresence mode="wait" custom={direcao} initial={false}>
-          <motion.div
-            key={page}
-            custom={direcao}
-            variants={semMovimento ? undefined : variantesPara(page)}
-            initial="entrar"
-            animate="centro"
-            exit="sair"
-          >
-        {page === "home"       && <Home setPage={setPage} />}
-        {page === "login"      && <Login setPage={setPage} />}
-        {page === "dashboard"  && <Dashboard setPage={setPage} goToCompany={goToCompany} />}
+        {animaTroca ? (
+          <AnimatePresence mode="wait" custom={direcao} initial={false}>
+            <motion.div
+              key={page}
+              custom={direcao}
+              variants={semMovimento ? undefined : transicaoDeTela}
+              initial="entrar"
+              animate="centro"
+              exit="sair"
+            >
+          {page === "home"       && <Home setPage={setPage} />}
+          {page === "login"      && <Login setPage={setPage} />}
+          {page === "dashboard"  && <Dashboard setPage={setPage} goToCompany={goToCompany} />}
 
-        {/* `fallback` vazio de propósito: numa rede local a tela chega
-            em milissegundos, e um spinner piscando seria pior que a
-            troca direta. */}
-        <Suspense fallback={null}>
-        {page === "company"    && <CompanyPanel setPage={setPage} company={selectedCompany} />}
-        {page === "reading"    && <ReadingPanel setPage={setPage} company={selectedCompany} />}
-        {page === "about"      && <About setPage={setPage} />}
-        {page === "technology" && <Technology setPage={setPage} />}
-        {page === "contact"    && <Contact setPage={setPage} />}
-        {page === "companies"  && <Companies setPage={setPage} goToCompany={goToCompany} />}
-        {page === "operations" && <Operations setPage={setPage} />}
-        {page === "reports"    && <Reports setPage={setPage} />}
-        {page === "alerts"     && <Alerts setPage={setPage} />}
-        {page === "drones"     && <Drones setPage={setPage} />}
-        {page === "readings"   && <Readings setPage={setPage} />}
-        {page === "operators"  && <Operators setPage={setPage} />}
-        </Suspense>
-          </motion.div>
-        </AnimatePresence>
+          {/* `fallback` vazio de propósito: numa rede local a tela chega
+              em milissegundos, e um spinner piscando seria pior que a
+              troca direta. */}
+          <Suspense fallback={null}>
+          {page === "company"    && <CompanyPanel setPage={setPage} company={selectedCompany} />}
+          {page === "reading"    && <ReadingPanel setPage={setPage} company={selectedCompany} />}
+          {page === "about"      && <About setPage={setPage} />}
+          {page === "technology" && <Technology setPage={setPage} />}
+          {page === "contact"    && <Contact setPage={setPage} />}
+          {page === "companies"  && <Companies setPage={setPage} goToCompany={goToCompany} />}
+          {page === "operations" && <Operations setPage={setPage} />}
+          {page === "reports"    && <Reports setPage={setPage} />}
+          {page === "alerts"     && <Alerts setPage={setPage} />}
+          {page === "drones"     && <Drones setPage={setPage} />}
+          {page === "readings"   && <Readings setPage={setPage} />}
+          {page === "operators"  && <Operators setPage={setPage} />}
+          </Suspense>
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <>
+            {page === "home"       && <Home setPage={setPage} />}
+            {page === "login"      && <Login setPage={setPage} />}
+            {page === "dashboard"  && <Dashboard setPage={setPage} goToCompany={goToCompany} />}
+
+            {/* `fallback` vazio de propósito: numa rede local a tela chega
+                em milissegundos, e um spinner piscando seria pior que a
+                troca direta. */}
+            <Suspense fallback={null}>
+            {page === "company"    && <CompanyPanel setPage={setPage} company={selectedCompany} />}
+            {page === "reading"    && <ReadingPanel setPage={setPage} company={selectedCompany} />}
+            {page === "about"      && <About setPage={setPage} />}
+            {page === "technology" && <Technology setPage={setPage} />}
+            {page === "contact"    && <Contact setPage={setPage} />}
+            {page === "companies"  && <Companies setPage={setPage} goToCompany={goToCompany} />}
+            {page === "operations" && <Operations setPage={setPage} />}
+            {page === "reports"    && <Reports setPage={setPage} />}
+            {page === "alerts"     && <Alerts setPage={setPage} />}
+            {page === "drones"     && <Drones setPage={setPage} />}
+            {page === "readings"   && <Readings setPage={setPage} />}
+            {page === "operators"  && <Operators setPage={setPage} />}
+            </Suspense>
+          </>
+        )}
       </div>
       {booting && <LoadingScreen onComplete={finishIntro} />}
       {!booting && ["home", "about", "technology"].includes(page) && <CursorDrone />}
