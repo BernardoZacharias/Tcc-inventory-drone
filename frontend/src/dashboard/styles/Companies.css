@@ -144,9 +144,27 @@
   color: var(--muted);
 }
 
+/* Alinhamento dos botoes SEM tirar a celula da tabela.
+ *
+ * Aqui havia `display: flex` com `height: 60px`. Um `<td>` que vira
+ * flex deixa de ser table-cell: ele sai do algoritmo que calcula a
+ * altura da linha e passa a se medir sozinho. O resultado era a
+ * `border-bottom` desta celula caindo numa altura diferente da das
+ * outras -- a linha da tabela saia torta.
+ *
+ * A altura fixa piorava: as linhas nao tem todas a mesma altura,
+ * porque empresa sem CNPJ ocupa menos. Onde a linha real passava de
+ * 60px, o desencontro ficava visivel.
+ *
+ * `text-align: right` resolve o alinhamento sem custo nenhum: o
+ * `.icon-btn` ja e `inline-flex`, entao os botoes se comportam como
+ * conteudo em linha e a celula continua sendo celula. */
 .actions-cell {
-  display: flex;
-  gap: 6px;
-  height: 60px;
-  justify-content: flex-end;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* O espaco entre os botoes, que antes vinha do `gap` do flex. */
+.actions-cell .icon-btn + .icon-btn {
+  margin-left: 6px;
 }
