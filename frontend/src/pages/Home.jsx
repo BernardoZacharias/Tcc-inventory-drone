@@ -1,9 +1,8 @@
 import "../styles/Home.css";
-import "../styles/DroneHero.css";
 import { motion } from "framer-motion";
 import { Boxes, QrCode, Radar, ShieldCheck } from "lucide-react";
 
-import DroneAnimation from "../components/DroneAnimation";
+import SystemDroneVisual from "../components/SystemDroneVisual";
 import ScannerEffect from "../components/ScannerEffect";
 import BenefitCard from "../components/BenefitCard";
 import Button from "../components/Button";
@@ -69,14 +68,7 @@ export default function Home({ setPage }) {
             </div>
           </motion.div>
 
-          <motion.div
-            className="hero-visual" data-paralaxe="26"
-            variants={cleanScaleIn}
-            initial="hidden"
-            animate="visible"
-          >
-            <DroneAnimation />
-          </motion.div>
+          <SystemDroneVisual />
         </div>
       </section>
 

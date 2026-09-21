@@ -320,3 +320,67 @@
   font-weight: 700;
   letter-spacing: -0.012em;
 }
+
+
+/* ── Título de seção: um padrão só para as quatro páginas ──────────
+   Cada página tinha o seu: 760px na inicial, 850px em Sobre e
+   Tecnologia, 720px em Contato — com margens de 56, 65 e 48px, e o
+   degradê no texto só em duas delas. Lado a lado, as seções não
+   pareciam do mesmo site.
+
+   As regras viviam nos arquivos de cada página. Quando as telas
+   passaram a ser carregadas sob demanda, elas começaram a chegar
+   DEPOIS deste arquivo e a sobrescrevê-lo — por isso a definição foi
+   removida de lá, em vez de disputada daqui com seletor mais forte.
+   Uma fonte só, sem briga de cascata. */
+.section-title,
+.about-title,
+.technology-title,
+.contact-title {
+  max-width: 820px;
+  margin: 0 auto 56px;
+  text-align: center;
+}
+
+/* O degradê começa na cor do texto e termina no acento. Ele NÃO pode
+   partir de `--text-strong` fixo: as faixas invertidas (Sobre e
+   Tecnologia) usam justamente essa cor como fundo, então o primeiro
+   terço do título era pintado da cor do fundo e sumia — "Do voo do
+   drone até o painel" aparecia como "rone até o painel".
+
+   Por isso a cor de partida é um token. Cada faixa invertida troca o
+   valor por `--bg-2`, que lá é a cor do texto. O título continua sendo
+   uma regra só; quem muda é o contexto. */
+.section-title h2,
+.about-title h2,
+.technology-title h2,
+.contact-title h2 {
+  margin-bottom: 14px;
+  background: linear-gradient(120deg,
+    var(--titulo-inicio, var(--text-strong)) 30%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Faixas invertidas: fundo escuro no tema claro, claro no escuro. */
+.about-section,
+.about-benefits,
+.technology-section.light,
+.technology-future.light {
+  --titulo-inicio: var(--bg-2);
+  --titulo-sub: color-mix(in srgb, var(--bg-2) 78%, var(--text-strong));
+}
+
+/* Mesma ideia do degrade: o cinza do subtitulo foi calibrado para
+   fundo claro. Sobre a faixa invertida ele encosta em 3:1 e o texto
+   fica cansativo de ler, entao la o token vira um tom apagado da
+   propria cor do texto da faixa. */
+.section-title p,
+.about-title p,
+.technology-title p,
+.contact-title p {
+  color: var(--titulo-sub, var(--muted));
+  font-size: 16px;
+  line-height: 1.7;
+}

@@ -96,28 +96,6 @@
   position: relative;
 }
 
-.contact-title {
-  max-width: 720px;
-  margin: 0 auto 48px;
-  text-align: center;
-}
-
-.contact-title h2 {
-  font-size: clamp(28px, 3.4vw, 40px);
-  margin-bottom: 12px;
-  font-weight: 800;
-  background: linear-gradient(120deg, var(--text-strong) 30%, var(--cyan) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.contact-title p {
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.6;
-}
-
 .contact-layout {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;

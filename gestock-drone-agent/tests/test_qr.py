@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -114,6 +115,91 @@ def test_duas_aparicoes_confirmam():
     assert leituras[0].confirmacoes == 2
 
 
+def test_fallback_cv2_reconfirma_sem_estourar_a_janela():
+    """O intervalo 5 não pode tornar impossível confirmar em janela 4."""
+
+    class PipelineFalso:
+        def obter(self, nome):
+            return object()
+
+    class MotorSoCv2(QrEngine):
+        def _preparar(self, frame):
+            return PipelineFalso()
+
+        def _tentar(self, imagem, nome, zbar_decode):
+            return []
+
+        def _tentar_opencv(self, pipeline):
+            return [Achado(codigo="SO-CV2", estrategia="CV2")]
+
+    with patch("src.vision.qr_reader._decodificador_de_qr",
+               return_value=lambda imagem: []):
+        m = MotorSoCv2(confirmacoes=2, janela=4, intervalo_cv2=5)
+        saidas = [l for _ in range(6) for l in m.processar(object())]
+
+    assert [l.codigo for l in saidas] == ["SO-CV2"]
+
+
+def test_primeiro_codigo_nao_esconde_outro_em_variante_diferente():
+    """Ao descobrir uma cena, agrega códigos de tratamentos distintos."""
+
+    class PipelineFalso:
+        def obter(self, nome):
+            return nome
+
+    class MotorVariantes(QrEngine):
+        def _preparar(self, frame):
+            return PipelineFalso()
+
+        def _tentar(self, imagem, nome, zbar_decode):
+            if nome == "CINZA":
+                return [Achado(codigo="FACIL", estrategia=nome)]
+            if nome == "OTSU":
+                return [Achado(codigo="DIFICIL", estrategia=nome)]
+            return []
+
+    with patch("src.vision.qr_reader._decodificador_de_qr",
+               return_value=lambda imagem: []):
+        m = MotorVariantes(confirmacoes=2, janela=4, intervalo_cv2=99)
+        assert m.processar(object()) == []
+        lidos = sorted(l.codigo for l in m.processar(object()))
+
+    assert lidos == ["DIFICIL", "FACIL"]
+
+
+def test_exploracao_periodica_encontra_codigo_que_chegou_depois():
+    """Um QR fácil já visível não pode bloquear para sempre outro QR."""
+
+    class PipelineFalso:
+        def obter(self, nome):
+            return nome
+
+    class MotorCena(QrEngine):
+        def __init__(self):
+            super().__init__(confirmacoes=1, janela=4, intervalo_cv2=99)
+            self.quadro = 0
+
+        def _preparar(self, frame):
+            self.quadro += 1
+            return PipelineFalso()
+
+        def _tentar(self, imagem, nome, zbar_decode):
+            if nome == "CINZA":
+                return [Achado(codigo="FACIL", estrategia=nome)]
+            if nome == "OTSU" and self.quadro > 1:
+                return [Achado(codigo="NOVO", estrategia=nome)]
+            return []
+
+    with patch("src.vision.qr_reader._decodificador_de_qr",
+               return_value=lambda imagem: []):
+        m = MotorCena()
+        assert [l.codigo for l in m.processar(object())] == ["FACIL"]
+        posteriores = [l.codigo for _ in range(m._intervalo_exploracao)
+                       for l in m.processar(object())]
+
+    assert "NOVO" in posteriores
+
+
 def test_confirmacao_exige_a_janela_e_nao_a_vida_toda():
     # "A" no quadro 1 e de novo no quadro 6: fora da janela de 3,
     # não conta como confirmação.
@@ -177,6 +263,18 @@ def test_leitura_ja_vem_interpretada():
     assert leitura.dados.produto_id == "12345"
     assert leitura.dados.quantidade == 50
     assert leitura.codigo == ETIQUETA     # o cru vai inteiro para a API
+
+
+def test_falha_de_persistencia_reabre_a_leitura():
+    m = MotorFalso([["A"], ["A"], ["A"]], confirmacoes=2, janela=4)
+    m.processar(object())
+    primeira = m.processar(object())
+    assert [l.codigo for l in primeira] == ["A"]
+
+    assert m.reabrir_leitura("A") is True
+    assert m.codigos_lidos == []
+    assert m.stats.confirmadas == 0
+    assert [l.codigo for l in m.processar(object())] == ["A"]
 
 
 # ── 5. ponta a ponta com imagem de verdade ───────────────────────
@@ -442,6 +540,7 @@ def test_estatisticas_mostram_o_custo_de_cada_variante():
     resumo = m.stats.resumo()
     assert resumo["tentativas_por_quadro"] > 0
     assert resumo["ms_por_quadro"] > 0
+    assert resumo["ms_por_quadro"] >= resumo["ms_decodificacao_por_quadro"]
     vencedora = resumo["estrategias"]
     assert any(e["acertos"] > 0 for e in vencedora.values())
 

@@ -179,7 +179,11 @@ class EstatisticasQr:
     duplicados: int = 0           # repetições descartadas
     descartadas_por_confirmacao: int = 0
     tentativas: int = 0           # chamadas ao decodificador
-    ms_total: float = 0.0         # tempo gasto analisando
+    # Tempo ponta a ponta do QrEngine (pré-processamento, decodificação,
+    # confirmação e parser). Antes este campo somava apenas o tempo dos
+    # decodificadores e fazia o custo real parecer menor do que era.
+    ms_total: float = 0.0
+    ms_decodificacao_total: float = 0.0
 
     # Por variante: quantas vezes foi tentada, quantas acertou, e quanto
     # custou. É o que permite ao operador escolher a configuração certa
@@ -191,6 +195,7 @@ class EstatisticasQr:
             nome, {"tentativas": 0, "acertos": 0, "ms": 0.0})
         e["tentativas"] += 1
         e["ms"] += ms
+        self.ms_decodificacao_total += ms
         if acertou:
             e["acertos"] += 1
 
@@ -206,6 +211,9 @@ class EstatisticasQr:
             "tentativas_por_quadro": round(por_quadro, 2),
             "ms_por_quadro": round(
                 (self.ms_total / self.quadros) if self.quadros else 0.0, 1),
+            "ms_decodificacao_por_quadro": round(
+                (self.ms_decodificacao_total / self.quadros)
+                if self.quadros else 0.0, 1),
             "estrategias": {
                 nome: {
                     "tentativas": int(e["tentativas"]),
@@ -277,6 +285,17 @@ class QrEngine:
         self._vencedora: Optional[str] = None   # variante que leu por último
         self._cursor = 0                        # onde a varredura parou
         self._desde_cv2 = 0                     # quadros desde a última tentativa do OpenCV
+        # Quando o fallback acha um candidato, ele ganha uma rajada de
+        # tentativas consecutivas. Assim uma cadência de 5 quadros não
+        # entra em conflito com uma janela de confirmação de 4.
+        self._rajada_cv2 = 0
+        # Mesmo com uma variante vencedora, reabre periodicamente a
+        # busca completa para não deixar um segundo QR mais difícil
+        # escondido atrás do primeiro.
+        self._desde_exploracao = 0
+        self._intervalo_exploracao = max(8, janela * 2)
+        self._exploracao_restante = 0
+        self._pendentes_exploracao: set[str] = set()
         # Escala e deslocamento aplicados no pré-processamento, para
         # converter as coordenadas de volta ao quadro original.
         self._transformacao = (1.0, 0, 0)
@@ -377,7 +396,6 @@ class QrEngine:
 
         ms = (time.perf_counter() - inicio) * 1000
         self.stats.tentativas += 1
-        self.stats.ms_total += ms
         self.stats.registrar(nome, bool(achados), ms)
         return achados
 
@@ -388,20 +406,77 @@ class QrEngine:
         pipeline = self._preparar(frame)
         self.imagem_vista = None
 
-        achados: List[Achado] = []
+        por_codigo: Dict[str, Achado] = {}
         if zbar_decode is not None:
-            for nome in self._ordem(tem_alvo=bool(self._alvos)):
+            tinha_alvo = bool(self._alvos)
+            exploracao_forcada = bool(
+                self._pendentes_exploracao and self._exploracao_restante > 0)
+            if exploracao_forcada:
+                self._exploracao_restante -= 1
+
+            exploracao = exploracao_forcada
+            if tinha_alvo and not exploracao_forcada:
+                self._desde_exploracao += 1
+                exploracao = self._desde_exploracao >= self._intervalo_exploracao
+
+            # Sem alvo, mantém a varredura barata. Se uma das variantes
+            # encontrar algo, a lista é ampliada naquele mesmo quadro
+            # para procurar outros códigos sob tratamentos diferentes.
+            ordem = self._ordem(tem_alvo=tinha_alvo)
+            if exploracao:
+                ordem = self._ordem(tem_alvo=True)
+                self._desde_exploracao = 0
+
+            indice = 0
+            while indice < len(ordem):
+                nome = ordem[indice]
+                indice += 1
                 try:
                     imagem = pipeline.obter(nome)
                 except Exception as exc:  # noqa: BLE001
                     log.debug("variante %s falhou: %s", nome, exc)
                     continue
 
-                achados = self._tentar(imagem, nome, zbar_decode)
-                if achados:
-                    # Apostar nesta primeiro no próximo quadro.
-                    self._vencedora = nome
-                    break
+                encontrados = self._tentar(imagem, nome, zbar_decode)
+                novos = [a for a in encontrados if a.codigo not in por_codigo]
+                for achado in novos:
+                    por_codigo[achado.codigo] = achado
+
+                if encontrados:
+                    if novos:
+                        # A variante que revelou informação nova merece
+                        # ser a primeira aposta no quadro seguinte.
+                        self._vencedora = nome
+
+                    if not tinha_alvo:
+                        # Primeira descoberta: complete a inspeção deste
+                        # quadro para não parar no QR mais fácil da cena.
+                        for restante in self._ordem(tem_alvo=True):
+                            if restante not in ordem:
+                                ordem.append(restante)
+                        tinha_alvo = True
+                        exploracao = True
+                        self._desde_exploracao = 0
+                    elif not exploracao:
+                        # Caminho rápido entre as explorações periódicas.
+                        break
+
+            # Se códigos diferentes dependeram da exploração completa,
+            # preserve esse modo por uma janela curta. Assim todos têm
+            # oportunidade de atingir o mesmo número de confirmações,
+            # mesmo que usem variantes distintas da imagem.
+            if exploracao and len(por_codigo) > 1 and self.confirmacoes > 1:
+                novos_pendentes = {
+                    codigo for codigo in por_codigo
+                    if codigo not in self._emitidos
+                    and codigo not in self._pendentes_exploracao
+                }
+                if novos_pendentes:
+                    self._pendentes_exploracao.update(novos_pendentes)
+                    self._exploracao_restante = max(
+                        self._exploracao_restante, self.janela - 1)
+
+        achados = list(por_codigo.values())
 
         # Último recurso: o detector do próprio OpenCV. Lê casos que o
         # zbar recusa (e vice-versa), e não sofre do problema de
@@ -414,10 +489,20 @@ class QrEngine:
         # chega nele em menos de meio segundo, e a confirmação em
         # múltiplos quadros absorve essa espera.
         if not achados:
-            self._desde_cv2 += 1
-            if self._desde_cv2 >= self.intervalo_cv2:
+            em_rajada = self._rajada_cv2 > 0
+            if em_rajada:
+                self._rajada_cv2 -= 1
+            else:
+                self._desde_cv2 += 1
+
+            if em_rajada or self._desde_cv2 >= self.intervalo_cv2:
                 self._desde_cv2 = 0
                 achados = self._tentar_opencv(pipeline)
+                if (achados and not em_rajada and self.confirmacoes > 1
+                        and any(a.codigo not in self._emitidos for a in achados)):
+                    # Há espaço para reconfirmar dentro da mesma janela,
+                    # mesmo quando uma tentativa intermediária falhar.
+                    self._rajada_cv2 = max(1, self.janela - 1)
 
         # A vista de diagnóstico é calculada DEPOIS da decisão, para não
         # entrar no caminho crítico. Fora do modo diagnóstico não custa
@@ -441,7 +526,6 @@ class QrEngine:
             ms = (time.perf_counter() - inicio) * 1000
 
             self.stats.tentativas += 1
-            self.stats.ms_total += ms
             self.stats.registrar("CV2", bool(texto), ms)
 
             if texto and pontos is not None:
@@ -466,6 +550,7 @@ class QrEngine:
         if frame is None:
             return []
 
+        inicio_processamento = time.perf_counter()
         self.stats.quadros += 1
         achados = self._decodificar(frame)
         self._alvos = achados
@@ -498,9 +583,19 @@ class QrEngine:
                               estrategia=achado.estrategia, confirmacoes=vezes,
                               pontos=achado.pontos)
             self._emitidos[codigo] = leitura
+            self._pendentes_exploracao.discard(codigo)
             self.stats.confirmadas += 1
             confirmadas.append(leitura)
 
+            if achado.estrategia == "CV2":
+                # A rajada cumpriu seu papel; não desperdiça os quadros
+                # restantes depois que o código já foi confirmado.
+                self._rajada_cv2 = 0
+
+        if self._exploracao_restante <= 0:
+            self._pendentes_exploracao.clear()
+
+        self.stats.ms_total += (time.perf_counter() - inicio_processamento) * 1000
         return confirmadas
 
     # ── o que a tela precisa ──────────────────────────────────────
@@ -536,7 +631,25 @@ class QrEngine:
         self._vencedora = None
         self._cursor = 0
         self._desde_cv2 = 0
+        self._rajada_cv2 = 0
+        self._desde_exploracao = 0
+        self._exploracao_restante = 0
+        self._pendentes_exploracao.clear()
         self.stats = EstatisticasQr()
+
+    def reabrir_leitura(self, codigo: str) -> bool:
+        """
+        Desfaz a emissão quando a camada de persistência falha.
+
+        O QR volta a ficar elegível imediatamente; como o histórico de
+        confirmação é mantido, o próximo quadro pode tentar gravá-lo de
+        novo sem obrigar o operador a refazer toda a passagem.
+        """
+        leitura = self._emitidos.pop(codigo, None)
+        if leitura is None:
+            return False
+        self.stats.confirmadas = max(0, self.stats.confirmadas - 1)
+        return True
 
     @property
     def codigos_lidos(self) -> List[str]:

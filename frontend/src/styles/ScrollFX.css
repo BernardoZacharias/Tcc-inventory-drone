@@ -88,6 +88,17 @@
   .escalonar.is-in > *:nth-child(n + 8) { transition-delay: 490ms; }
 }
 
+/* Rede de segurança: o conteúdo aparece sem animação nenhuma.
+   Usada quando a revelação demorou demais — a essa altura o efeito já
+   falhou, e insistir nele seria apostar de novo no que não funcionou. */
+.sem-espera,
+.sem-espera > * {
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  transition: none !important;
+}
+
 /* Movimento reduzido: o conteúdo aparece, sem viagem. */
 @media (prefers-reduced-motion: reduce) {
   .reveal-esq,

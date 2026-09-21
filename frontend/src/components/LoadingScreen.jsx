@@ -75,14 +75,11 @@ export default function LoadingScreen({ onComplete }) {
       const unit = droneUnitRef.current;
       const loaderDrone = unit?.querySelector(".gestock-loader__drone");
       /*
-       * O drone do topo da página inicial, para onde a aeronave da
-       * abertura voa. O seletor apontava para `.drone-stage
-       * .drone-model`, que deixou de existir quando o drone em vetor
-       * foi trocado pela foto — e sem alvo a passagem de bastão não
-       * acontecia: a aeronave sumia com a abertura e o drone da home
-       * aparecia noutro lugar, dando a impressão de piscar.
+       * O drone canônico compartilhado por Home e Sobre é o ponto de
+       * chegada da abertura. A passagem continua medindo o alvo real,
+       * mesmo depois da retirada da antiga fotografia branca da Home.
        */
-      const landingDrone = document.querySelector(".palco-drone__aeronave");
+      const landingDrone = document.querySelector(".home .system-drone-card > svg");
 
       if (unit && loaderDrone && landingDrone) {
         const source = loaderDrone.getBoundingClientRect();

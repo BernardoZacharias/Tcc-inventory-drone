@@ -11,6 +11,10 @@ import "./styles/polish.css";
 // Continuidade visual das páginas institucionais (carregado por último)
 import "./styles/MarketingFlow.css";
 import "./styles/Experience.css";
+// Contrato visual final das páginas públicas. Os seletores são
+// deliberadamente mais específicos porque About/Technology/Contact
+// carregam suas folhas sob demanda depois do CSS global.
+import "./styles/PublicConsistency.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

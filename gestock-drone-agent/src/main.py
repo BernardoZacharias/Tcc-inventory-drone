@@ -416,6 +416,12 @@ def main(argv: Optional[list] = None) -> int:
                                         enviador.acordar()
                                 except Exception as exc:  # noqa: BLE001
                                     log.error("Falha ao gravar na fila: %s", exc)
+                                    # O motor marca o código como emitido
+                                    # antes de entregá-lo aqui. Se o disco
+                                    # falhar, reabra a leitura para que o
+                                    # próximo quadro tente persistir de novo.
+                                    qr.reabrir_leitura(leitura.codigo)
+                                    continue
 
                             if compartilhado is not None:
                                 compartilhado.publicar_leitura(leitura)

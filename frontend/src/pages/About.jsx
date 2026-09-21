@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import {
-  ArrowLeft,
   BrainCircuit,
   Cpu,
   Database,
@@ -15,6 +14,7 @@ import {
 import Button from "../components/Button";
 import BotaoInstalador from "../components/BotaoInstalador";
 import ScannerEffect from "../components/ScannerEffect";
+import SystemDroneVisual from "../components/SystemDroneVisual";
 import "../styles/About.css";
 import "../styles/PublicUX.css";
 
@@ -22,11 +22,6 @@ export default function About({ setPage }) {
   return (
     <main className="about-page">
       <section className="about-hero">
-        <button className="about-back" onClick={() => setPage("home")}>
-          <ArrowLeft size={18} />
-          Voltar
-        </button>
-
         <motion.div
           className="about-hero-content"
           initial={{ opacity: 0, y: 18 }}
@@ -54,16 +49,7 @@ export default function About({ setPage }) {
           </div>
         </motion.div>
 
-        <motion.div
-          className="about-drone-card" data-paralaxe="30"
-          aria-hidden="true"
-          initial={{ opacity: 0, y: 14, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <Drone size={110} />
-          <div className="about-drone-light" />
-        </motion.div>
+        <SystemDroneVisual />
       </section>
 
       <section className="about-section">

@@ -55,12 +55,12 @@ body.gestock-is-loading {
 /* Enquanto a abertura roda, o drone do topo fica escondido: são dois
    desenhos da mesma aeronave, e mostrar os dois ao mesmo tempo é o que
    fazia parecer que ela piscava. */
-body.gestock-is-loading .home .palco-drone__voo {
+body.gestock-is-loading .home .system-drone-card > svg {
   opacity: 0;
 }
 
 /* Ele "recebe" a aeronave quando ela chega, já no fim da abertura. */
-body.gestock-is-loading.gestock-is-handoff .home .palco-drone__voo {
+body.gestock-is-loading.gestock-is-handoff .home .system-drone-card > svg {
   animation: heroDroneReceive 380ms var(--ease-fluid) 1180ms both;
 }
 

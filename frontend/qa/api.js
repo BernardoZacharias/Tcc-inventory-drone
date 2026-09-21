@@ -41,3 +41,12 @@ export const gerarRelatorio = write, excluirRelatorio = write;
 export const criarAlerta = write, marcarAlertaLido = write, excluirAlerta = write;
 export const criarDrone = write, atualizarDrone = write, excluirDrone = write;
 export const criarLeitura = write, iniciarLeitura = write, pararLeitura = write;
+
+/*
+ * A prévia substitui o cliente real por este duplê, então tudo que o
+ * app importa de `services/api` precisa existir aqui também — senão o
+ * módulo falha ao carregar e a prévia inteira fica em branco, que foi
+ * o que aconteceu quando o tratamento de sessão expirada chegou.
+ */
+export const EVENTO_SESSAO_EXPIRADA = "gestock:sessao-expirada";
+export function rearmarAvisoDeSessao() {}

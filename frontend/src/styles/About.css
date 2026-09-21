@@ -4,7 +4,7 @@
     color: var(--text-strong);
     overflow: hidden;
   }
-  
+
   .about-hero {
     position: relative;
     min-height: 100vh;
@@ -26,7 +26,7 @@
     border-radius: 999px !important;
     top: 92px !important;
   }
-  
+
   .about-hero::before {
     content: "";
     position: absolute;
@@ -37,7 +37,7 @@
     background-size: 42px 42px;
     opacity: 0.6;
   }
-  
+
   .about-back {
     position: absolute;
     top: 30px;
@@ -52,23 +52,23 @@
     padding: 12px 18px;
     border-radius: 999px;
   }
-  
+
   .about-hero-content {
     position: relative;
     z-index: 2;
   }
-  
+
   .about-hero h1 {
     font-size: clamp(44px, 6vw, 82px);
     line-height: 0.95;
     max-width: 900px;
   }
-  
+
   .about-hero h1 strong {
     color: var(--accent);
     text-shadow: 0 0 38px var(--accent);
   }
-  
+
   .about-hero p {
     margin-top: 28px;
     max-width: 760px;
@@ -76,13 +76,13 @@
     font-size: 19px;
     line-height: 1.7;
   }
-  
+
   .about-actions {
     display: flex;
     gap: 18px;
     margin-top: 36px;
   }
-  
+
   .about-drone-card {
     position: relative;
     z-index: 2;
@@ -103,11 +103,11 @@
       0 0 70px var(--accent-soft);
     animation: aboutFloat 5s ease-in-out infinite;
   }
-  
+
   .about-drone-card svg {
     filter: drop-shadow(0 0 26px var(--accent));
   }
-  
+
   .about-drone-light {
     position: absolute;
     top: 245px;
@@ -117,46 +117,29 @@
     clip-path: polygon(45% 0, 55% 0, 100% 100%, 0 100%);
     opacity: 0.8;
   }
-  
+
   @keyframes aboutFloat {
     0%, 100% {
       transform: translateY(0) rotate(0deg);
     }
-  
+
     50% {
       transform: translateY(-18px) rotate(1deg);
     }
   }
-  
+
   .about-section {
     padding: 110px 70px;
     background: var(--text-strong);
     color: var(--bg-2);
   }
-  
-  .about-title {
-    max-width: 850px;
-    margin: 0 auto 65px;
-    text-align: center;
-  }
-  
-  .about-title h2 {
-    font-size: 44px;
-    margin-bottom: 18px;
-  }
-  
-  .about-title p {
-    color: var(--muted-2);
-    font-size: 18px;
-    line-height: 1.7;
-  }
-  
-  .about-flow {
+
+.about-flow {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 24px;
   }
-  
+
   .about-flow-card {
     position: relative;
     min-height: 260px;
@@ -168,7 +151,7 @@
     overflow: hidden;
     transition: 0.35s;
   }
-  
+
   .about-flow-card::after {
     content: "";
     position: absolute;
@@ -177,29 +160,29 @@
     background: var(--accent-soft);
     filter: blur(30px);
   }
-  
+
   .about-flow-card:hover {
     transform: translateY(-10px);
     border-color: var(--accent-line);
   }
-  
+
   .about-flow-card svg {
     color: var(--accent-deep);
     width: 42px;
     height: 42px;
     margin-bottom: 28px;
   }
-  
+
   .about-flow-card h3 {
     font-size: 22px;
     margin-bottom: 12px;
   }
-  
+
   .about-flow-card p {
     color: var(--muted-2);
     line-height: 1.6;
   }
-  
+
   .about-tech {
     padding: 110px 70px;
     display: grid;
@@ -210,24 +193,24 @@
       radial-gradient(circle at 25% 20%, var(--accent-line), transparent 32%),
       var(--bg-0);
   }
-  
+
   .about-tech-text h2 {
     font-size: 48px;
     margin-bottom: 24px;
   }
-  
+
   .about-tech-text p {
     color: var(--muted);
     font-size: 18px;
     line-height: 1.7;
   }
-  
+
   .about-tech-list {
     margin-top: 34px;
     display: grid;
     gap: 16px;
   }
-  
+
   .about-tech-list div {
     display: flex;
     align-items: center;
@@ -237,28 +220,28 @@
     background: var(--surface-2);
     border: 1px solid var(--accent-line);
   }
-  
+
   .about-tech-list svg {
     color: var(--accent);
   }
-  
+
   .about-tech-list span {
     color: var(--accent-strong);
     font-weight: 600;
   }
-  
+
   .about-benefits {
     padding: 110px 70px;
     background: var(--text-strong);
     color: var(--bg-2);
   }
-  
+
   .about-benefits-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 24px;
   }
-  
+
   .about-benefit {
     padding: 30px;
     min-height: 240px;
@@ -268,49 +251,49 @@
     box-shadow: 0 20px 50px var(--surface-2);
     transition: 0.3s;
   }
-  
+
   .about-benefit:hover {
     transform: translateY(-8px);
   }
-  
+
   .about-benefit svg {
     color: var(--accent-deep);
     width: 42px;
     height: 42px;
     margin-bottom: 24px;
   }
-  
+
   .about-benefit h3 {
     font-size: 22px;
     margin-bottom: 12px;
   }
-  
+
   .about-benefit p {
     color: var(--muted-2);
     line-height: 1.6;
   }
-  
+
   @media (max-width: 1000px) {
     .about-hero,
     .about-tech {
       grid-template-columns: 1fr;
       padding: 110px 28px 60px;
     }
-  
+
     .about-back {
       left: 28px;
     }
-  
+
     .about-section,
     .about-benefits {
       padding: 80px 28px;
     }
-  
+
     .about-flow,
     .about-benefits-grid {
       grid-template-columns: 1fr;
     }
-  
+
     .about-actions {
       flex-direction: column;
       align-items: flex-start;
