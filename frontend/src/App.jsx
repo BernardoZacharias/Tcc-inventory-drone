@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { direcaoEntre, transicaoDeTela } from "./utils/transicao";
+import { direcaoEntre, variantesPara } from "./utils/transicao";
 
 /* As telas institucionais, que compartilham a mesma barra de navegação. */
 const MOSTRAM_NAVEGACAO = new Set(["home", "about", "technology", "contact"]);
@@ -182,7 +182,11 @@ export default function App() {
         {MOSTRAM_NAVEGACAO.has(page) && <Navbar setPage={setPage} current={page} />}
 
         {/*
-          A troca de tela desliza na direção do clique.
+          A troca de tela desliza na direção do clique — na landing.
+
+          O painel usa outro conjunto de variantes: quem trabalha troca
+          de tela o tempo todo, e ali a animação vira espera repetida.
+          `variantesPara` decide pela tela de destino.
 
           `mode="wait"` garante que a que sai termine antes de a próxima
           entrar: com as duas ao mesmo tempo, seria preciso tirá-las do
@@ -193,7 +197,7 @@ export default function App() {
           <motion.div
             key={page}
             custom={direcao}
-            variants={semMovimento ? undefined : transicaoDeTela}
+            variants={semMovimento ? undefined : variantesPara(page)}
             initial="entrar"
             animate="centro"
             exit="sair"

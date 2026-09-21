@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import logo from "../assets/logo-gestock.png";
-import drone from "../assets/drone.png";
+
+import { Drone } from "lucide-react";
 import "../styles/LoadingScreen.css";
 
 const MINIMUM_DURATION = 1200;
@@ -145,11 +146,19 @@ export default function LoadingScreen({ onComplete }) {
             <div className="gestock-loader__rotor-wash wash-left" />
             <div className="gestock-loader__rotor-wash wash-right" />
 
-            {/* O mesmo drone da página inicial e da tela de acesso.
-                A abertura era a última tela que ainda montava a
-                aeronave em vetor — três desenhos diferentes do mesmo
-                produto é o tipo de detalhe que denuncia a costura. */}
-            <img className="gestock-loader__drone" src={drone} alt="" />
+            {/* O MESMO drone da página inicial, em vetor.
+
+                A fotografia que estava aqui era branca e não tinha como
+                seguir o tema: no claro virava branco sobre branco e
+                sumia. O remendo era um halo escuro atrás dela, que
+                tratava o sintoma — a peça continuava sendo a errada.
+
+                O vetor herda `currentColor`, então a mesma arte serve
+                aos dois temas sem segunda versão. E como a Home usa
+                este mesmo desenho, a abertura entrega um objeto só
+                atravessando a tela, em vez de trocar de aeronave no
+                meio do voo. */}
+            <Drone className="gestock-loader__drone" size={220} strokeWidth={1.5} />
           </div>
 
           <div className="gestock-loader__charge-beam" />

@@ -50,3 +50,6 @@ gestock-drone-agent/etiquetas/
 # Aplicativo desktop (Electron)
 desktop/node_modules/
 desktop/dist-app/
+
+# Metadados locais da Vercel (incluem tokens de ambiente)
+.vercel/
