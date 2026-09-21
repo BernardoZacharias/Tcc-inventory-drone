@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { API_URL, createApiEndpointResolver } from "../src/services/apiEndpoint.js";
-import { preflightStatus } from "../src/utils/preflightStatus.js";
-import { defaultRoute, resolveRoute } from "../src/utils/navigation.js";
+import { API_URL, createApiEndpointResolver } from "../src/shared/services/apiEndpoint.js";
+import { preflightStatus } from "../src/dashboard/utils/preflightStatus.js";
+import { defaultRoute, resolveRoute } from "../src/shared/utils/navigation.js";
 
 function desktop(t, info) {
   const previous = Object.getOwnPropertyDescriptor(globalThis, "window");

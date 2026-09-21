@@ -2,19 +2,19 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { MotionConfig } from "framer-motion";
-import ToastHub from "./components/Toast";
-import "./styles/global.css";
+import ToastHub from "./shared/components/Toast";
+import "./shared/styles/global.css";
 // depois do global: o @theme do Tailwind aponta para os tokens dele
-import "./styles/tailwind.css";
+import "./shared/styles/tailwind.css";
 // polish.css por ultimo: sobrepoe as folhas de cada pagina
-import "./styles/polish.css";
+import "./shared/styles/polish.css";
 // Continuidade visual das páginas institucionais (carregado por último)
-import "./styles/MarketingFlow.css";
-import "./styles/Experience.css";
+import "./landing/styles/MarketingFlow.css";
+import "./shared/styles/Experience.css";
 // Contrato visual final das páginas públicas. Os seletores são
 // deliberadamente mais específicos porque About/Technology/Contact
 // carregam suas folhas sob demanda depois do CSS global.
-import "./styles/PublicConsistency.css";
+import "./landing/styles/PublicConsistency.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

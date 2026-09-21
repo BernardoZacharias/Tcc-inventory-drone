@@ -1,15 +1,15 @@
 import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { direcaoEntre, deveAnimarTroca, transicaoDeTela } from "./utils/transicao";
+import { direcaoEntre, deveAnimarTroca, transicaoDeTela } from "./shared/utils/transicao";
 
 /* As telas institucionais, que compartilham a mesma barra de navegação. */
 const MOSTRAM_NAVEGACAO = new Set(["home", "about", "technology", "contact"]);
-import useReveal from "./hooks/useReveal";
-import useScrollFX from "./hooks/useScrollFX";
-import "./styles/ScrollFX.css";
-import LoadingScreen from "./components/LoadingScreen";
-import CursorDrone from "./components/CursorDrone";
-import Navbar from "./components/Navbar";
+import useReveal from "./landing/hooks/useReveal";
+import useScrollFX from "./landing/hooks/useScrollFX";
+import "./landing/styles/ScrollFX.css";
+import LoadingScreen from "./landing/components/LoadingScreen";
+import CursorDrone from "./landing/components/CursorDrone";
+import Navbar from "./landing/components/Navbar";
 
 /*
  * As três primeiras telas vêm no pacote inicial; o resto é buscado
@@ -23,23 +23,23 @@ import Navbar from "./components/Navbar";
  * são os pontos de entrada (o site abre na Home, o aplicativo no Login)
  * e dividi-las só trocaria bytes por um piscar de carregamento.
  */
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
+import Home from "./landing/pages/Home";
+import Login from "./dashboard/pages/Login";
+import Dashboard from "./dashboard/pages/Dashboard";
 
 const CARREGAR = {
-  company: () => import("./pages/CompanyPanel"),
-  reading: () => import("./pages/ReadingPanel"),
-  about: () => import("./pages/About"),
-  technology: () => import("./pages/Technology"),
-  contact: () => import("./pages/Contact"),
-  companies: () => import("./pages/Companies"),
-  operations: () => import("./pages/Operations"),
-  reports: () => import("./pages/Reports"),
-  alerts: () => import("./pages/Alerts"),
-  drones: () => import("./pages/Drones"),
-  readings: () => import("./pages/Readings"),
-  operators: () => import("./pages/Operators"),
+  company: () => import("./dashboard/pages/CompanyPanel"),
+  reading: () => import("./dashboard/pages/ReadingPanel"),
+  about: () => import("./landing/pages/About"),
+  technology: () => import("./landing/pages/Technology"),
+  contact: () => import("./landing/pages/Contact"),
+  companies: () => import("./dashboard/pages/Companies"),
+  operations: () => import("./dashboard/pages/Operations"),
+  reports: () => import("./dashboard/pages/Reports"),
+  alerts: () => import("./dashboard/pages/Alerts"),
+  drones: () => import("./dashboard/pages/Drones"),
+  readings: () => import("./dashboard/pages/Readings"),
+  operators: () => import("./dashboard/pages/Operators"),
 };
 
 const CompanyPanel = lazy(CARREGAR.company);
@@ -81,10 +81,10 @@ function aquecerPainel() {
   for (const tela of TELAS_DO_PAINEL) CARREGAR[tela]?.().catch(() => {});
 }
 
-import { getCurrentUser } from "./utils/auth";
-import { PAGE_TITLES, resolveRoute, defaultRoute, isDesktop } from "./utils/navigation";
-import { EVENTO_SESSAO_EXPIRADA } from "./services/api";
-import { toast } from "./services/toast";
+import { getCurrentUser } from "./shared/utils/auth";
+import { PAGE_TITLES, resolveRoute, defaultRoute, isDesktop } from "./shared/utils/navigation";
+import { EVENTO_SESSAO_EXPIRADA } from "./shared/services/api";
+import { toast } from "./shared/services/toast";
 
 function hasSession() {
   try { return Boolean(getCurrentUser() && localStorage.getItem("token")); }

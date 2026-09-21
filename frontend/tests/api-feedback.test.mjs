@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { resumoStats, listarEmpresas, pararLeitura, statusLeitura,
-         rearmarAvisoDeSessao, EVENTO_SESSAO_EXPIRADA } from "../src/services/api.js";
+         rearmarAvisoDeSessao, EVENTO_SESSAO_EXPIRADA } from "../src/shared/services/api.js";
 
 const storage = {
   itens: { usuario: '{"perfil":"admin"}', token: "jwt-de-ontem" },

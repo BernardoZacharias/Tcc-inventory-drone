@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import DroneCockpit from "../src/components/DroneCockpit";
+import DroneCockpit from "../src/dashboard/components/DroneCockpit";
 
 /*
  * CockpitPreview — mostra a tela de voo fora do Electron.

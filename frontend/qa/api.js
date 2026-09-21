@@ -1,4 +1,4 @@
-import { computeReadingStats } from "../src/utils/readingStats.js";
+import { computeReadingStats } from "../src/shared/utils/readingStats.js";
 export const API_URL = "/__qa/api";
 let scenario = "populated";
 export const getApiUrl = async () => `${API_URL}/${scenario}`;

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   direcaoEntre, transicaoDeTela, DESLIZE, deveAnimarTroca,
-} from "../src/utils/transicao.js";
+} from "../src/shared/utils/transicao.js";
 
 /*
  * A direção do deslize é a parte que dá para errar em silêncio: um

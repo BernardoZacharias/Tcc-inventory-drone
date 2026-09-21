@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { resolveRoute } from "../src/utils/navigation.js";
-import { computeReadingStats, localDateKey } from "../src/utils/readingStats.js";
+import { resolveRoute } from "../src/shared/utils/navigation.js";
+import { computeReadingStats, localDateKey } from "../src/shared/utils/readingStats.js";
 
 test("páginas públicas abrem sem sessão", () => {
   for (const page of ["home", "login", "about", "technology", "contact"]) assert.equal(resolveRoute(page, null, false).page, page);
